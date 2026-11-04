@@ -88,7 +88,7 @@ export default function Dashboard() {
             placeholder="Key name (optional)"
             className="flex-1 rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm"
           />
-          <button onClick={createKey} className="rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-black hover:bg-cyan-400">
+          <button onClick={createKey} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400">
             Create
           </button>
         </div>
@@ -123,10 +123,10 @@ export default function Dashboard() {
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Usage</h2>
         <p className="mt-2 text-sm text-gray-400">
-          Base URL: <code className="text-cyan-300">https://broomy.laserraptor.eu/api/v1</code>
+          Base URL: <code className="text-amber-300">https://broomy.laserraptor.eu/api/v1</code>
         </p>
         <p className="text-sm text-gray-400">
-          Model: <code className="text-cyan-300">qwen3.8-flash</code> (also: qwen3.8-flash-next-iq3_s, sensei-qwen3.8-flash)
+          Model: <code className="text-amber-300">qwen3.8-flash</code> (also: qwen3.8-flash-next-iq3_s, sensei-qwen3.8-flash)
         </p>
       </section>
     </div>

@@ -10,167 +10,270 @@ client = OpenAI(
     api_key="YOUR_API_KEY",
 )
 
-response = client.chat.completions.create(
+reply = client.chat.completions.create(
     model="qwen3.8-flash",
     messages=[{"role": "user", "content": "Hello!"}],
 )
-print(response.choices[0].message.content)`,
+print(reply.choices[0].message.content)`,
   js: `import OpenAI from "openai";
 
 const client = new OpenAI({
   baseURL: "https://broomy.laserraptor.eu/api/v1",
-  apiKey: "YOUR_API_KEY",
+  apiKey: process.env.BROOMY_KEY,
 });
 
-const response = await client.chat.completions.create({
+const reply = await client.chat.completions.create({
   model: "qwen3.8-flash",
   messages: [{ role: "user", content: "Hello!" }],
 });
-console.log(response.choices[0].message.content);`,
+console.log(reply.choices[0].message.content);`,
   curl: `curl https://broomy.laserraptor.eu/api/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{
-    "model": "qwen3.8-flash",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'`,
+  -d '{"model":"qwen3.8-flash","messages":[{"role":"user","content":"Hello!"}]}'`,
 };
 
-export default function Pricing() {
+const FEATURES_BASIC = [
+  "OpenAI-compatible chat completions",
+  "Unlimited tokens — no caps, no overage fees",
+  "1 concurrent request",
+  "European-hosted, EU-only routing",
+  "Cancel any month, no lock-in",
+];
+
+const FEATURES_PRO = [
+  "Everything in Basic",
+  "3 concurrent requests",
+  "Priority queue during peak load",
+  "Higher throughput window",
+  "Direct support channel",
+];
+
+export default function Home() {
   const [tab, setTab] = useState<"python" | "js" | "curl">("python");
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
+    <div className="relative">
       {/* Hero */}
-      <section className="text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Pricing</h1>
-        <p className="mt-3 text-lg text-gray-400 max-w-2xl mx-auto">
-          Rent a Qwen 3.8 model via an OpenAI-compatible API. EU-hosted. No lock-in — cancel monthly.
-        </p>
-        <p className="mt-1 text-sm text-gray-500">Base URL <code className="text-cyan-300">https://broomy.laserraptor.eu/api/v1</code></p>
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-amber-500/10 blur-[120px] rounded-full" />
+          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-500/8 blur-[100px] rounded-full" />
+        </div>
+        <div className="mx-auto max-w-6xl px-6 pt-20 pb-16">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-zinc-400 mb-6">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+              European-hosted · OpenAI-compatible · Cancel monthly
+            </div>
+            <h1 className="font-display text-5xl sm:text-7xl font-bold tracking-tight leading-[1.05]">
+              Rent a model.<br />
+              <span className="text-amber-400">Skip the GPU.</span>
+            </h1>
+            <p className="mt-6 text-lg text-zinc-400 max-w-xl leading-relaxed">
+              Qwen 3.8, served from Europe. No token limits, no per-request billing —
+              just a flat monthly price and an OpenAI-compatible endpoint you can
+              drop into any existing SDK.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <a href="/login" className="rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-black hover:bg-amber-300 transition">
+                Get an API key
+              </a>
+              <a href="/docs" className="rounded-full border border-white/15 px-6 py-3 text-sm font-medium hover:bg-white/5 transition">
+                Read the docs
+              </a>
+            </div>
+            <p className="mt-4 text-xs text-zinc-500">
+              Base URL: <code className="text-zinc-300">broomy.laserraptor.eu/api/v1</code>
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* Code example */}
-      <section className="mt-10">
-        <div className="rounded-lg border border-gray-800 bg-gray-900/60 overflow-hidden">
-          <div className="flex border-b border-gray-800">
-            {(["python", "js", "curl"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-4 py-2 text-sm ${tab === t ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
-              >
-                {t === "python" ? "Python" : t === "js" ? "JavaScript" : "cURL"}
-              </button>
-            ))}
+      <section className="mx-auto max-w-6xl px-6 py-12">
+        <div className="grid lg:grid-cols-2 gap-10 items-start">
+          <div>
+            <h2 className="font-display text-2xl font-semibold">Drop-in replacement</h2>
+            <p className="mt-3 text-zinc-400 leading-relaxed">
+              Point any OpenAI SDK at Broomy. Change two lines — base URL and API key —
+              and your existing code works unchanged. Streaming, function calling,
+              and vision input all supported.
+            </p>
+            <ul className="mt-6 space-y-3 text-sm text-zinc-300">
+              <li className="flex items-start gap-3">
+                <span className="mt-0.5 h-5 w-5 rounded-full bg-amber-400/15 text-amber-400 flex items-center justify-center text-xs font-bold">✓</span>
+                <span>262,144 token context window</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-0.5 h-5 w-5 rounded-full bg-amber-400/15 text-amber-400 flex items-center justify-center text-xs font-bold">✓</span>
+                <span>Text + image input, text output</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-0.5 h-5 w-5 rounded-full bg-amber-400/15 text-amber-400 flex items-center justify-center text-xs font-bold">✓</span>
+                <span>Server-sent events streaming</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-0.5 h-5 w-5 rounded-full bg-amber-400/15 text-amber-400 flex items-center justify-center text-xs font-bold">✓</span>
+                <span>EU-hosted — no US or China routing</span>
+              </li>
+            </ul>
           </div>
-          <pre className="p-4 text-sm overflow-x-auto text-gray-200">
-            <code>{CODE[tab]}</code>
-          </pre>
-        </div>
-        <div className="mt-3 text-center">
-          <a href="/dashboard" className="text-sm text-cyan-400 hover:underline">Get your API key →</a>
+          <div className="rounded-xl border border-white/10 bg-[#0d0d14] overflow-hidden shadow-2xl shadow-black/40">
+            <div className="flex items-center gap-1.5 border-b border-white/5 px-4 py-3">
+              <div className="h-3 w-3 rounded-full bg-red-500/70" />
+              <div className="h-3 w-3 rounded-full bg-yellow-500/70" />
+              <div className="h-3 w-3 rounded-full bg-green-500/70" />
+              <div className="ml-3 flex gap-1">
+                {(["python", "js", "curl"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`px-3 py-1 rounded text-xs font-medium transition ${
+                      tab === t ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {t === "python" ? "Python" : t === "js" ? "JavaScript" : "cURL"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <pre className="p-5 text-sm leading-relaxed overflow-x-auto text-zinc-300 font-mono">
+              <code>{CODE[tab]}</code>
+            </pre>
+          </div>
         </div>
       </section>
 
-      {/* Pricing cards */}
-      <section className="mt-16">
-        <h2 className="text-2xl font-bold text-center mb-8">Choose your plan</h2>
-        <div className="grid gap-6 sm:grid-cols-2 max-w-3xl mx-auto">
+      {/* Pricing */}
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="text-center mb-12">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold">Simple, flat pricing</h2>
+          <p className="mt-3 text-zinc-400">One model. Two plans. No token limits.</p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* Basic */}
-          <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-6 flex flex-col">
-            <h3 className="text-xl font-semibold">Basic</h3>
-            <p className="mt-1 text-sm text-gray-400">For lightweight workloads</p>
-            <div className="mt-4">
-              <span className="text-4xl font-bold">€20</span>
-              <span className="text-gray-400"> /mo</span>
+          <div className="group relative rounded-2xl border border-white/10 bg-white/[0.02] p-8 transition hover:border-white/20">
+            <div className="flex items-baseline justify-between">
+              <h3 className="font-display text-xl font-semibold">Basic</h3>
+              <span className="text-xs text-zinc-500 uppercase tracking-wider">Light use</span>
             </div>
-            <ul className="mt-6 space-y-2 text-sm text-gray-300 flex-1">
-              <li>✓ OpenAI-compatible API</li>
-              <li>✓ Unlimited tokens</li>
-              <li>✓ 1 concurrent request</li>
-              <li>✓ EU-hosted</li>
-              <li>✓ No lock-in — cancel monthly</li>
+            <div className="mt-6 flex items-baseline gap-1">
+              <span className="font-display text-5xl font-bold">€20</span>
+              <span className="text-zinc-500">/month</span>
+            </div>
+            <p className="mt-2 text-sm text-zinc-500">For occasional queries and small projects.</p>
+            <ul className="mt-8 space-y-3 text-sm text-zinc-300">
+              {FEATURES_BASIC.map((f) => (
+                <li key={f} className="flex items-start gap-3">
+                  <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>{f}</span>
+                </li>
+              ))}
             </ul>
-            <p className="mt-4 text-xs text-gray-500">Unlimited tokens, limited only by model speed.</p>
-            <a href="/login" className="mt-6 block text-center rounded-md bg-cyan-500 px-4 py-2.5 text-sm font-medium text-black hover:bg-cyan-400">
-              Start Coding
+            <a href="/login" className="mt-8 block text-center rounded-full border border-white/15 px-6 py-3 text-sm font-medium hover:bg-white/5 transition">
+              Start with Basic
             </a>
           </div>
 
           {/* Pro */}
-          <div className="rounded-lg border border-cyan-500/50 bg-gray-900/50 p-6 flex flex-col relative">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-cyan-500 px-3 py-0.5 text-xs font-medium text-black">Best value</span>
-            <h3 className="text-xl font-semibold">Pro</h3>
-            <p className="mt-1 text-sm text-gray-400">For your daily workloads</p>
-            <div className="mt-4">
-              <span className="text-4xl font-bold">€50</span>
-              <span className="text-gray-400"> /mo</span>
+          <div className="group relative rounded-2xl border border-amber-400/30 bg-gradient-to-b from-amber-400/[0.06] to-transparent p-8 transition hover:border-amber-400/50">
+            <div className="absolute -top-3 left-8">
+              <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-black">Recommended</span>
             </div>
-            <ul className="mt-6 space-y-2 text-sm text-gray-300 flex-1">
-              <li>✓ OpenAI-compatible API</li>
-              <li>✓ Unlimited tokens</li>
-              <li>✓ 3 concurrent requests</li>
-              <li>✓ EU-hosted</li>
-              <li>✓ No lock-in — cancel monthly</li>
-              <li>✓ Priority queue</li>
+            <div className="flex items-baseline justify-between">
+              <h3 className="font-display text-xl font-semibold">Pro</h3>
+              <span className="text-xs text-zinc-500 uppercase tracking-wider">Daily use</span>
+            </div>
+            <div className="mt-6 flex items-baseline gap-1">
+              <span className="font-display text-5xl font-bold">€50</span>
+              <span className="text-zinc-500">/month</span>
+            </div>
+            <p className="mt-2 text-sm text-zinc-500">For daily workloads and production apps.</p>
+            <ul className="mt-8 space-y-3 text-sm text-zinc-300">
+              {FEATURES_PRO.map((f) => (
+                <li key={f} className="flex items-start gap-3">
+                  <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>{f}</span>
+                </li>
+              ))}
             </ul>
-            <p className="mt-4 text-xs text-gray-500">Unlimited tokens, limited only by model speed.</p>
-            <a href="/login" className="mt-6 block text-center rounded-md bg-cyan-500 px-4 py-2.5 text-sm font-medium text-black hover:bg-cyan-400">
-              Start Coding
+            <a href="/login" className="mt-8 block text-center rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-black hover:bg-amber-300 transition">
+              Start with Pro
             </a>
           </div>
         </div>
-        <p className="mt-4 text-center text-xs text-gray-500">Prorated at checkout · All prices net, plus statutory VAT.</p>
+        <p className="mt-6 text-center text-xs text-zinc-600">
+          Prices are net, plus statutory VAT. Cancel any month — no lock-in, no auto-renewal surprises.
+        </p>
       </section>
 
-      {/* Model info */}
-      <section className="mt-16">
-        <h2 className="text-2xl font-bold text-center">The model</h2>
-        <div className="mt-6 max-w-2xl mx-auto rounded-lg border border-gray-800 bg-gray-900/50 p-6">
-          <h3 className="font-semibold text-white">Qwen 3.8 Flash</h3>
-          <p className="mt-2 text-sm text-gray-400">
-            A Qwen 3.8 flash model served from European infrastructure. 256k context window, vision support,
-            text output. Slower than Claude Code — but unlimited tokens and a fraction of the price.
-          </p>
-          <ul className="mt-4 space-y-1 text-sm text-gray-300">
-            <li>• Context: 262,144 tokens</li>
-            <li>• Input modalities: text + image</li>
-            <li>• Output: text</li>
-            <li>• EU-hosted (no US/China routing)</li>
-          </ul>
+      {/* Model specs */}
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 sm:p-12">
+          <div className="grid sm:grid-cols-2 gap-8 items-center">
+            <div>
+              <span className="text-xs text-amber-400 uppercase tracking-widest font-medium">The model</span>
+              <h2 className="font-display text-3xl font-bold mt-2">Qwen 3.8 Flash</h2>
+              <p className="mt-4 text-zinc-400 leading-relaxed">
+                A Qwen 3.8 flash model running on European infrastructure. Slower than
+                Claude or GPT-4, but unlimited tokens and a fraction of the price.
+                Ideal for batch processing, code review, document analysis, and
+                anything where throughput matters more than latency.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "Context", value: "262k tokens" },
+                { label: "Input", value: "Text + images" },
+                { label: "Output", value: "Text" },
+                { label: "Hosting", value: "EU only" },
+              ].map((s) => (
+                <div key={s.label} className="rounded-lg border border-white/5 bg-white/[0.03] p-4">
+                  <p className="text-xs text-zinc-500 uppercase tracking-wider">{s.label}</p>
+                  <p className="mt-1 font-display text-lg font-semibold">{s.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="mt-16 max-w-3xl mx-auto">
-        <h2 className="text-2xl font-bold text-center mb-6">Pricing questions</h2>
-        <div className="space-y-4">
+      <section className="mx-auto max-w-3xl px-6 py-16">
+        <h2 className="font-display text-2xl font-bold text-center mb-8">Questions</h2>
+        <div className="space-y-3">
           {[
-            { q: "How does billing work?", a: "Monthly subscription. Pay once per month, get unlimited access for that period. No auto-renewal surprises — cancel anytime." },
-            { q: "Should I choose Basic or Pro?", a: "Basic (€20/mo) is for light, occasional use with 1 concurrent request. Pro (€50/mo) is for daily workloads with 3 concurrent requests and priority queue." },
-            { q: "What does 'unlimited tokens' mean?", a: "No token cap. You can send as many tokens as you want — the only limit is how fast the model can generate (throughput), not a quota." },
-            { q: "Do prices include VAT?", a: "No. All prices are net, plus statutory VAT. Intended for businesses." },
-            { q: "Can I use the OpenAI SDK?", a: "Yes. The API is OpenAI-compatible. Point any OpenAI SDK at our base URL with your API key." },
+            { q: "How does billing work?", a: "Flat monthly fee. Pay once, get unlimited access for 30 days. No auto-renewal — you decide when to top up." },
+            { q: "Basic or Pro?", a: "Basic (€20) for light, occasional use with one concurrent request. Pro (€50) for daily workloads with three concurrent requests and priority queuing." },
+            { q: "What does unlimited tokens mean?", a: "No token cap and no overage charges. The only limit is how fast the model generates — throughput, not quota." },
+            { q: "Are prices including VAT?", a: "No — all prices are net, plus statutory VAT. Intended for business use." },
+            { q: "Can I use the OpenAI SDK?", a: "Yes. The API is fully OpenAI-compatible. Point any SDK at our base URL with your API key and it works." },
           ].map((f) => (
-            <div key={f.q} className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-              <h3 className="font-medium text-white">{f.q}</h3>
-              <p className="mt-1 text-sm text-gray-400">{f.a}</p>
-            </div>
+            <details key={f.q} className="group rounded-xl border border-white/5 bg-white/[0.02] p-5">
+              <summary className="flex items-center justify-between cursor-pointer font-medium text-zinc-200 list-none">
+                {f.q}
+                <svg className="h-4 w-4 text-zinc-500 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <p className="mt-3 text-sm text-zinc-400 leading-relaxed">{f.a}</p>
+            </details>
           ))}
         </div>
       </section>
 
       {/* CTA */}
-      <section className="mt-16 text-center">
-        <h2 className="text-2xl font-bold">Top up and start building.</h2>
-        <p className="mt-2 text-gray-400">No subscription minimum. Your credits work with the model on this page.</p>
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <a href="/login" className="rounded-md bg-cyan-500 px-5 py-2.5 text-sm font-medium text-black hover:bg-cyan-400">
-            Get started
-          </a>
-          <a href="/docs" className="rounded-md border border-gray-700 px-5 py-2.5 text-sm font-medium hover:bg-gray-800">
-            Read the docs
+      <section className="mx-auto max-w-6xl px-6 py-20 text-center">
+        <h2 className="font-display text-3xl sm:text-4xl font-bold">Start building today.</h2>
+        <p className="mt-3 text-zinc-400">No subscription minimums. No token limits. Just a model and an API key.</p>
+        <div className="mt-8">
+          <a href="/login" className="rounded-full bg-amber-400 px-8 py-3.5 text-sm font-semibold text-black hover:bg-amber-300 transition">
+            Get your API key
           </a>
         </div>
       </section>

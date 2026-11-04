@@ -34,7 +34,7 @@ export default function Docs() {
 
       <h2 className="mt-8 text-lg font-semibold">Streaming</h2>
       <p className="mt-2 text-sm text-gray-400">
-        Set <code className="text-cyan-300">stream: true</code> to receive Server-Sent Events in OpenAI format.
+        Set <code className="text-amber-300">stream: true</code> to receive Server-Sent Events in OpenAI format.
       </p>
 
       <h2 className="mt-8 text-lg font-semibold">Using the OpenAI SDK (Python)</h2>
