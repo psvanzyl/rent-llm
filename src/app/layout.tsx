@@ -3,12 +3,13 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  icons: { icon: "/broom-icon.svg", apple: "/broom-icon.svg" },
   title: {
     default: "RentLLM — rent Qwen 3.8 by the token",
     template: "%s · RentLLM",
   },
   description: "Rent access to a Qwen 3.8 model via an OpenAI-compatible API. Sign in with Google, get an API key, start calling.",
-  metadataBase: new URL("https://rent.broomy.laserraptor.eu"),
+  metadataBase: new URL("https://broomy.laserraptor.eu"),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

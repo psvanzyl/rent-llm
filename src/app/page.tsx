@@ -6,7 +6,7 @@ const CODE = {
   python: `from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://rent.broomy.laserraptor.eu/api/v1",
+    base_url="https://broomy.laserraptor.eu/api/v1",
     api_key="YOUR_API_KEY",
 )
 
@@ -18,7 +18,7 @@ print(response.choices[0].message.content)`,
   js: `import OpenAI from "openai";
 
 const client = new OpenAI({
-  baseURL: "https://rent.broomy.laserraptor.eu/api/v1",
+  baseURL: "https://broomy.laserraptor.eu/api/v1",
   apiKey: "YOUR_API_KEY",
 });
 
@@ -27,7 +27,7 @@ const response = await client.chat.completions.create({
   messages: [{ role: "user", content: "Hello!" }],
 });
 console.log(response.choices[0].message.content);`,
-  curl: `curl https://rent.broomy.laserraptor.eu/api/v1/chat/completions \\
+  curl: `curl https://broomy.laserraptor.eu/api/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -47,7 +47,7 @@ export default function Pricing() {
         <p className="mt-3 text-lg text-gray-400 max-w-2xl mx-auto">
           Rent a Qwen 3.8 model via an OpenAI-compatible API. EU-hosted. No lock-in — cancel monthly.
         </p>
-        <p className="mt-1 text-sm text-gray-500">Base URL <code className="text-cyan-300">https://rent.broomy.laserraptor.eu/api/v1</code></p>
+        <p className="mt-1 text-sm text-gray-500">Base URL <code className="text-cyan-300">https://broomy.laserraptor.eu/api/v1</code></p>
       </section>
 
       {/* Code example */}

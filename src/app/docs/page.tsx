@@ -16,13 +16,13 @@ export default function Docs() {
 
       <h2 className="mt-8 text-lg font-semibold">List models</h2>
       <pre className="mt-3 rounded-lg border border-gray-800 bg-black p-4 text-sm overflow-x-auto">
-{`curl https://rent.broomy.laserraptor.eu/api/v1/models \\
+{`curl https://broomy.laserraptor.eu/api/v1/models \\
   -H "Authorization: Bearer YOUR_API_KEY"`}
       </pre>
 
       <h2 className="mt-8 text-lg font-semibold">Chat completions</h2>
       <pre className="mt-3 rounded-lg border border-gray-800 bg-black p-4 text-sm overflow-x-auto">
-{`curl https://rent.broomy.laserraptor.eu/api/v1/chat/completions \\
+{`curl https://broomy.laserraptor.eu/api/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -41,7 +41,7 @@ export default function Docs() {
       <pre className="mt-3 rounded-lg border border-gray-800 bg-black p-4 text-sm overflow-x-auto">
 {`from openai import OpenAI
 client = OpenAI(
-    base_url="https://rent.broomy.laserraptor.eu/api/v1",
+    base_url="https://broomy.laserraptor.eu/api/v1",
     api_key="YOUR_API_KEY",
 )
 resp = client.chat.completions.create(

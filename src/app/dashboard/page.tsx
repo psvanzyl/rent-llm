@@ -123,7 +123,7 @@ export default function Dashboard() {
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Usage</h2>
         <p className="mt-2 text-sm text-gray-400">
-          Base URL: <code className="text-cyan-300">https://rent.broomy.laserraptor.eu/api/v1</code>
+          Base URL: <code className="text-cyan-300">https://broomy.laserraptor.eu/api/v1</code>
         </p>
         <p className="text-sm text-gray-400">
           Model: <code className="text-cyan-300">qwen3.8-flash</code> (also: qwen3.8-flash-next-iq3_s, sensei-qwen3.8-flash)
