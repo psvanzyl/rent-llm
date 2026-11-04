@@ -1,19 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <!-- Purple rounded square background -->
   <rect width="512" height="512" rx="96" ry="96" fill="#7c3aed"/>
-  <!-- Broomstick outline in black -->
+  <!-- Broom outline in black - Fantasia style -->
   <g stroke="#000000" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
     <!-- Handle -->
-    <line x1="256" y1="60" x2="256" y2="300"/>
-    <!-- Bristle bundle: fan shape at bottom -->
-    <path d="M 256 300 Q 200 320 170 400"/>
-    <path d="M 256 300 Q 220 315 200 410"/>
-    <path d="M 256 300 L 230 420"/>
-    <path d="M 256 300 L 256 430"/>
-    <path d="M 256 300 L 282 420"/>
-    <path d="M 256 300 Q 292 315 312 410"/>
-    <path d="M 256 300 Q 312 320 342 400"/>
-    <!-- Tie band around bristles -->
-    <path d="M 226 305 Q 256 315 286 305" stroke-width="10"/>
+    <line x1="256" y1="40" x2="256" y2="260"/>
+    <!-- Bristle bundle: rounded/fan shape -->
+    <!-- Outer left curve -->
+    <path d="M 256 260 C 230 270 180 300 140 380"/>
+    <!-- Outer right curve -->
+    <path d="M 256 260 C 282 270 332 300 372 380"/>
+    <!-- Bottom connecting curve -->
+    <path d="M 140 380 C 200 420 312 420 372 380"/>
+    <!-- Inner bristle lines for texture -->
+    <path d="M 256 260 C 240 280 200 330 170 390"/>
+    <path d="M 256 260 C 248 285 220 340 200 400"/>
+    <path d="M 256 260 L 230 405"/>
+    <path d="M 256 260 L 256 410"/>
+    <path d="M 256 260 L 282 405"/>
+    <path d="M 256 260 C 264 285 292 340 312 400"/>
+    <path d="M 256 260 C 272 280 312 330 342 390"/>
+    <!-- Tie band -->
+    <path d="M 228 275 Q 256 288 284 275" stroke-width="10"/>
   </g>
 </svg>
