@@ -34,7 +34,8 @@ const handler_GET = async (req: Request) => {
     } else {
       user = (await updateUser(user.id, { lastLoginAt: new Date().toISOString() })) ?? user;
     }
-    const res = NextResponse.redirect(new URL("/dashboard", req.url));
+    const base = process.env.APP_URL || `https://${req.headers.get("host")}`;
+    const res = NextResponse.redirect(new URL("/dashboard", base));
     return withSessionCookie(res, req, user.id);
   } catch (e) {
     return serverErrorResponse(e, "email-verify");
