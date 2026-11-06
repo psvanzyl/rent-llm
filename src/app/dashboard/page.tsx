@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [keyError, setKeyError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<{ active: boolean; tier: string | null; until: string | null } | null>(null);
 
@@ -40,6 +41,7 @@ export default function Dashboard() {
   useEffect(() => { load(); }, []);
 
   async function createKey() {
+    setKeyError(null);
     const res = await fetch("/api/keys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -50,6 +52,8 @@ export default function Dashboard() {
       setCreatedKey(data.key);
       setNewKeyName("");
       load();
+    } else {
+      setKeyError(data?.message || data?.error || "Could not create key.");
     }
   }
 
@@ -113,30 +117,43 @@ export default function Dashboard() {
         ) : (
           <p className="mt-2 text-sm text-gray-400">Loading billing…</p>
         )}
-        <div className="mt-4 flex gap-2">
-          <button onClick={() => subscribe("basic")} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400">
-            Subscribe Basic (€20/mo)
-          </button>
-          <button onClick={() => subscribe("pro")} className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500">
-            Subscribe Pro (€50/mo)
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-gray-500">Payment via Mollie. You will be redirected to the hosted checkout.</p>
+        {billing && !billing.active && (
+          <>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => subscribe("basic")} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400">
+                Subscribe Basic (€20/mo)
+              </button>
+              <button onClick={() => subscribe("pro")} className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500">
+                Subscribe Pro (€50/mo)
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">Payment via Mollie. You will be redirected to the hosted checkout.</p>
+          </>
+        )}
       </section>
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Create API key</h2>
-        <div className="mt-3 flex gap-2">
-          <input
-            value={newKeyName}
-            onChange={(e) => setNewKeyName(e.target.value)}
-            placeholder="Key name (optional)"
-            className="flex-1 rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm"
-          />
-          <button onClick={createKey} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400">
-            Create
-          </button>
-        </div>
+        {billing?.active ? (
+          <>
+            <div className="mt-3 flex gap-2">
+              <input
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+                placeholder="Key name (optional)"
+                className="flex-1 rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm"
+              />
+              <button onClick={createKey} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400">
+                Create
+              </button>
+            </div>
+            {keyError && <p className="mt-2 text-sm text-red-400">{keyError}</p>}
+          </>
+        ) : (
+          <p className="mt-2 text-sm text-gray-400">
+            An active subscription is required to create API keys. Pick a plan above to continue.
+          </p>
+        )}
       </section>
 
       <section className="mt-8">
@@ -165,15 +182,17 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold">Usage</h2>
-        <p className="mt-2 text-sm text-gray-400">
-          Base URL: <code className="text-amber-300">https://broomy.laserraptor.eu/api/v1</code>
-        </p>
-        <p className="text-sm text-gray-400">
-          Model: <code className="text-amber-300">qwen3.8-flash</code> (also: qwen3.8-flash-next-iq3_s, sensei-qwen3.8-flash)
-        </p>
-      </section>
+      {billing?.active && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">Usage</h2>
+          <p className="mt-2 text-sm text-gray-400">
+            Base URL: <code className="text-amber-300">https://broomy.laserraptor.eu/api/v1</code>
+          </p>
+          <p className="text-sm text-gray-400">
+            Model: <code className="text-amber-300">qwen3.8-flash-next-ud-q4_k_xl</code> (also: qwen3.8-flash, qwen3.8-flash-next-iq3_s, sensei-qwen3.8-flash)
+          </p>
+        </section>
+      )}
     </div>
   );
 }

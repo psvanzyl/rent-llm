@@ -11,7 +11,7 @@ client = OpenAI(
 )
 
 reply = client.chat.completions.create(
-    model="qwen3.8-flash",
+    model="qwen3.8-flash-next-ud-q4_k_xl",
     messages=[{"role": "user", "content": "Hello!"}],
 )
 print(reply.choices[0].message.content)`,
@@ -23,14 +23,14 @@ const client = new OpenAI({
 });
 
 const reply = await client.chat.completions.create({
-  model: "qwen3.8-flash",
+  model: "qwen3.8-flash-next-ud-q4_k_xl",
   messages: [{ role: "user", content: "Hello!" }],
 });
 console.log(reply.choices[0].message.content);`,
   curl: `curl https://broomy.laserraptor.eu/api/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"model":"qwen3.8-flash","messages":[{"role":"user","content":"Hello!"}]}'`,
+  -d '{"model":"qwen3.8-flash-next-ud-q4_k_xl","messages":[{"role":"user","content":"Hello!"}]}'`,
 };
 
 const FEATURES_BASIC = [
