@@ -120,10 +120,12 @@ export default function Dashboard() {
         )}
         {billing?.active && (
           <button
-            onClick={() => subscribe(billing.tier || "basic")}
+            onClick={() => subscribe("pro")}
             className="mt-4 rounded-md border border-amber-500 px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/10"
           >
-            Extend {billing.tier || "basic"} — €{billing.tier === "pro" ? 50 : 20} for 31 more days
+            {billing.tier === "pro"
+              ? "Extend pro — €50 for 31 more days"
+              : "Switch to Pro — €50"}
           </button>
         )}
         {billing && !billing.active && (
