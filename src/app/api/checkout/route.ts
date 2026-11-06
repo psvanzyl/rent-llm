@@ -57,9 +57,13 @@ const handler_POST = async (req: Request) => {
       description: `Broomy — ${plan.name} (${plan.priceCents / 100} EUR/month)`,
       redirectUrl: `${origin}/dashboard?paid=1`,
       webhookUrl: `${origin}/api/webhook/mollie`,
-      sequenceType: "first",
+      // oneoff, not "first": Mollie offers no iDEAL for mandate-setup
+      // payments. Access is granted per payment by the webhook; renewal is a
+      // fresh checkout. Matches the site copy "No auto-renewal".
+      sequenceType: "oneoff",
+      order: "ideal,paypal",
       customerId,
-      metadata: { userId: user.id, plan: plan.id, purpose: "first-payment" },
+      metadata: { userId: user.id, plan: plan.id, purpose: "oneoff-payment" },
     };
 
     const r = await fetch("https://api.mollie.com/v2/payments", {
