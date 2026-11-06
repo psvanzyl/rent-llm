@@ -25,11 +25,13 @@ const handler_POST = async (req: Request) => {
   const key = process.env.MOLLIE_API_KEY;
   if (!key) return NextResponse.json({ error: "mollie_not_configured" }, { status: 503 });
 
-  let body: { plan?: unknown } = {};
-  try { body = (await req.json()) as { plan?: unknown }; } catch { body = {}; }
+  let body: { plan?: unknown; method?: unknown } = {};
+  try { body = (await req.json()) as { plan?: unknown; method?: unknown }; } catch { body = {}; }
   const planId = String(body.plan ?? "basic");
   const plan = planById(planId);
   if (!plan) return NextResponse.json({ error: "invalid_plan" }, { status: 400 });
+  // iDEAL is the default payment method; PayPal remains selectable.
+  const method = body.method === "paypal" ? "paypal" : "ideal";
 
   const origin = baseUrl(req);
   const amount = (plan.priceCents / 100).toFixed(2);
@@ -61,7 +63,7 @@ const handler_POST = async (req: Request) => {
       // payments. Access is granted per payment by the webhook; renewal is a
       // fresh checkout. Matches the site copy "No auto-renewal".
       sequenceType: "oneoff",
-      order: "ideal,paypal",
+      method,
       customerId,
       metadata: { userId: user.id, plan: plan.id, purpose: "oneoff-payment" },
     };

@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [keyError, setKeyError] = useState<string | null>(null);
+  const [payMethod, setPayMethod] = useState<"ideal" | "paypal">("ideal");
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<{ active: boolean; tier: string | null; until: string | null } | null>(null);
 
@@ -68,7 +69,7 @@ export default function Dashboard() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, method: payMethod }),
       });
       const data = await res.json();
       if (res.ok && data?.url) {
@@ -124,6 +125,19 @@ export default function Dashboard() {
           >
             Extend {billing.tier || "basic"} — €{billing.tier === "pro" ? 50 : 20} for 31 more days
           </button>
+        )}
+        {billing && !billing.active && (
+          <div className="mt-3 flex items-center gap-4 text-sm text-gray-300">
+            <span>Payment method:</span>
+            <label className="flex items-center gap-1.5">
+              <input type="radio" checked={payMethod === "ideal"} onChange={() => setPayMethod("ideal")} />
+              iDEAL
+            </label>
+            <label className="flex items-center gap-1.5">
+              <input type="radio" checked={payMethod === "paypal"} onChange={() => setPayMethod("paypal")} />
+              PayPal
+            </label>
+          </div>
         )}
         {billing && !billing.active && (
           <>
