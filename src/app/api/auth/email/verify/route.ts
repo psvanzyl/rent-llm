@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { createUser, findUserByEmail, normalizeEmail, updateUser } from "@/lib/accounts";
-import { consumeEmailToken } from "@/lib/email-tokens";
+import { consumeEmailToken, peekEmailToken } from "@/lib/email-tokens";
 import {
   authConfigured,
   originAllowed,
@@ -29,8 +29,13 @@ const GET_handler = async (req: Request) => {
   if (!token || token.length < 16) {
     return NextResponse.redirect(new URL("/login?error=invalid_or_expired_link", appBase(req)));
   }
-  // Render a confirmation page. The token is only consumed on POST, so email
-  // client pre-fetch (GET) cannot burn the single-use link.
+  // Validate up-front (without consuming) so a dead link bounces to /login
+  // immediately instead of rendering a button that cannot work. The token is
+  // only consumed on POST, so email-client pre-fetch (GET) cannot burn it.
+  const peekedEmail = await peekEmailToken(token);
+  if (!peekedEmail) {
+    return NextResponse.redirect(new URL("/login?error=invalid_or_expired_link", appBase(req)));
+  }
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -48,10 +53,10 @@ p{color:#9ca3af;font-size:.9rem}
 <body>
 <div class="card">
 <h1>Sign in to Broomy</h1>
-<p>Click the button below to complete sign-in. This link is single-use.</p>
+<p>Signing in as <strong>${escapeHtml(peekedEmail)}</strong>. This link is single-use.</p>
 <form method="POST" action="/api/auth/email/verify">
 <input type="hidden" name="token" value="${escapeHtml(token)}" />
-<button type="submit">Sign in</button>
+<button type="submit" onclick="this.disabled=true;this.form.submit();return false">Sign in</button>
 </form>
 </div>
 </body>

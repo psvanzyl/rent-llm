@@ -75,6 +75,16 @@ export async function createEmailToken(email: string, ttlMinutes = 30): Promise<
   return done;
 }
 
+export async function peekEmailToken(token: string): Promise<string | null> {
+  // Read-only check: exists, not used, not expired. Does NOT consume.
+  if (!token || token.length < 16) return null;
+  const store = await readStore();
+  const rec = store.tokens[token];
+  if (!rec || rec.used) return null;
+  if (new Date(rec.expiresAt).getTime() <= Date.now()) return null;
+  return rec.email;
+}
+
 export async function consumeEmailToken(token: string): Promise<string | null> {
   if (!token || token.length < 16) return null;
   const prev = chain;
