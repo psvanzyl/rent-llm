@@ -29,6 +29,16 @@ export interface UserRecord {
   updatedAt?: string;
   /** last successful sign-in — handy when auditing who actually uses an account */
   lastLoginAt?: string;
+  /** Mollie customer id for this user (created on first checkout) */
+  mollieCustomerId?: string;
+  /** Mollie subscription id once recurring is set up */
+  mollieSubscriptionId?: string;
+  /** active subscription tier, if any */
+  subscriptionTier?: "basic" | "pro";
+  /** ISO date until which the subscription grants access */
+  subscriptionUntil?: string;
+  /** payment references already processed (idempotency) */
+  processedPayments?: string[];
 }
 
 interface AccountStore {

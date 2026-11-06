@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { validateApiKey } from "@/lib/apikeys";
+import { getUser } from "@/lib/accounts";
+import { hasActiveSubscription } from "@/lib/subscriptions";
 import { jsonRoute } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,10 @@ const handler_GET = async (req: Request) => {
   const raw = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
   const rec = await validateApiKey(raw);
   if (!rec) return NextResponse.json({ error: "invalid_api_key" }, { status: 401 });
+  const owner = await getUser(rec.userId);
+  if (!hasActiveSubscription(owner)) {
+    return NextResponse.json({ error: "subscription_expired", message: "Subscription expired or inactive." }, { status: 402 });
+  }
 
   try {
     const res = await fetch(`${BACKEND}/models`, {

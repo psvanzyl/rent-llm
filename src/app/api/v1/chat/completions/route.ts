@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { validateApiKey } from "@/lib/apikeys";
+import { getUser } from "@/lib/accounts";
+import { hasActiveSubscription, tierConcurrent } from "@/lib/subscriptions";
 import { recordUsage } from "@/lib/usage";
 import { jsonRoute } from "@/lib/http";
 
@@ -8,11 +10,23 @@ export const dynamic = "force-dynamic";
 const BACKEND = process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1";
 const BACKEND_KEY = process.env.LLM_BACKEND_KEY || "local-no-auth";
 
+const inflight = new Map<string, number>();
+
 const handler_POST = async (req: Request) => {
   const auth = req.headers.get("authorization") || "";
   const raw = auth.startsWith("Bearer ") ? auth.slice(7).trim() : (req.headers.get("x-api-key") || "");
   const rec = await validateApiKey(raw);
   if (!rec) return NextResponse.json({ error: "invalid_api_key" }, { status: 401 });
+  const owner = await getUser(rec.userId);
+  if (!hasActiveSubscription(owner)) {
+    return NextResponse.json({ error: "subscription_expired", message: "Subscription expired or inactive." }, { status: 402 });
+  }
+  const limit = tierConcurrent(owner);
+  const current = inflight.get(rec.userId) || 0;
+  if (limit > 0 && current >= limit) {
+    return NextResponse.json({ error: "concurrency_limit", message: "Too many concurrent requests for your plan." }, { status: 429 });
+  }
+  inflight.set(rec.userId, current + 1);
 
   let body: unknown;
   try {
@@ -34,10 +48,12 @@ const handler_POST = async (req: Request) => {
       body: JSON.stringify(body),
     });
   } catch (e) {
+    inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
     return NextResponse.json({ error: "backend_unavailable" }, { status: 502 });
   }
 
   if (!upstream.ok || !upstream.body) {
+    inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
     const text = await upstream.text().catch(() => "");
     return new NextResponse(text, { status: upstream.status, headers: { "Content-Type": "application/json" } });
   }
@@ -47,6 +63,7 @@ const handler_POST = async (req: Request) => {
     const pt = data?.usage?.prompt_tokens ?? 0;
     const ct = data?.usage?.completion_tokens ?? 0;
     recordUsage(rec.id, pt, ct).catch(() => {});
+    inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
     return NextResponse.json(data);
   }
 
@@ -63,6 +80,7 @@ const handler_POST = async (req: Request) => {
       if (done) {
         controller.close();
         recordUsage(rec.id, promptTokens, completionTokens).catch(() => {});
+        inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
         return;
       }
       controller.enqueue(value);
@@ -88,6 +106,7 @@ const handler_POST = async (req: Request) => {
     },
     cancel() {
       reader.cancel();
+      inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
     },
   });
 

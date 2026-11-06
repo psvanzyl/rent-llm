@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { createApiKey, listApiKeys, revokeApiKey } from "@/lib/apikeys";
+import { getUser } from "@/lib/accounts";
+import { hasActiveSubscription } from "@/lib/subscriptions";
 import { getUsageForKeys } from "@/lib/usage";
 import { jsonRoute } from "@/lib/http";
 
@@ -27,6 +29,10 @@ const handler_GET = async (req: Request) => {
 const handler_POST = async (req: Request) => {
   const user = await currentUser(req);
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const full = await getUser(user.id);
+  if (!hasActiveSubscription(full)) {
+    return NextResponse.json({ error: "subscription_required", message: "An active subscription is required to create API keys." }, { status: 402 });
+  }
   let body: { name?: unknown } = {};
   try {
     body = (await req.json()) as { name?: unknown };

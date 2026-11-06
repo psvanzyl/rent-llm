@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [billing, setBilling] = useState<{ active: boolean; tier: string | null; until: string | null } | null>(null);
 
   async function load() {
     const me = await fetch("/api/auth/me");
@@ -29,6 +30,10 @@ export default function Dashboard() {
     const kr = await fetch("/api/keys");
     const kd = await kr.json();
     setKeys(kd.keys || []);
+    try {
+      const br = await fetch("/api/billing");
+      if (br.ok) setBilling(await br.json());
+    } catch {}
     setLoading(false);
   }
 
@@ -52,6 +57,24 @@ export default function Dashboard() {
     if (!confirm("Revoke this key?")) return;
     await fetch(`/api/keys?id=${id}`, { method: "DELETE" });
     load();
+  }
+
+  async function subscribe(plan: string) {
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data?.message || data?.error || "Checkout failed");
+      }
+    } catch {
+      alert("Network error");
+    }
   }
 
   async function logout() {
@@ -78,6 +101,28 @@ export default function Dashboard() {
           <button onClick={() => setCreatedKey(null)} className="mt-2 text-xs text-gray-400 hover:text-white">Dismiss</button>
         </div>
       )}
+
+      <section className="mt-8 rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+        <h2 className="text-lg font-semibold">Subscription</h2>
+        {billing ? (
+          <div className="mt-2 text-sm text-gray-300">
+            <p>Status: {billing.active ? "Active" : "Inactive"}</p>
+            <p>Tier: {billing.tier || "none"}</p>
+            {billing.until && <p>Access until: {new Date(billing.until).toLocaleDateString()}</p>}
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-gray-400">Loading billing…</p>
+        )}
+        <div className="mt-4 flex gap-2">
+          <button onClick={() => subscribe("basic")} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400">
+            Subscribe Basic (€20/mo)
+          </button>
+          <button onClick={() => subscribe("pro")} className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500">
+            Subscribe Pro (€50/mo)
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-gray-500">Payment via Mollie. You will be redirected to the hosted checkout.</p>
+      </section>
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Create API key</h2>
