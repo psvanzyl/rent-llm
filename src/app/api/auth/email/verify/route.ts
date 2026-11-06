@@ -16,6 +16,10 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function appBase(req: Request): string {
+  return process.env.APP_URL || `https://${req.headers.get("host") || "broomy.laserraptor.eu"}`;
+}
+
 const GET_handler = async (req: Request) => {
   if (!authConfigured()) {
     return NextResponse.json({ error: "auth_unavailable", message: "Sign-in is not configured." }, { status: 503 });
@@ -23,7 +27,7 @@ const GET_handler = async (req: Request) => {
   const url = new URL(req.url);
   const token = url.searchParams.get("token") || "";
   if (!token || token.length < 16) {
-    return NextResponse.redirect(new URL("/login?error=invalid_or_expired_link", req.url));
+    return NextResponse.redirect(new URL("/login?error=invalid_or_expired_link", appBase(req)));
   }
   // Render a confirmation page. The token is only consumed on POST, so email
   // client pre-fetch (GET) cannot burn the single-use link.
@@ -72,7 +76,7 @@ const POST_handler = async (req: Request) => {
   }
   const email = await consumeEmailToken(token);
   if (!email) {
-    return NextResponse.redirect(new URL("/login?error=invalid_or_expired_link", req.url));
+    return NextResponse.redirect(new URL("/login?error=invalid_or_expired_link", appBase(req)));
   }
   try {
     let user = await findUserByEmail(email);
@@ -87,7 +91,7 @@ const POST_handler = async (req: Request) => {
     } else {
       user = (await updateUser(user.id, { lastLoginAt: new Date().toISOString() })) ?? user;
     }
-    const base = process.env.APP_URL || `https://${req.headers.get("host")}`;
+    const base = appBase(req);
     const res = NextResponse.redirect(new URL("/dashboard", base));
     return withSessionCookie(res, req, user.id);
   } catch (e) {

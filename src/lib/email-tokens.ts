@@ -61,7 +61,7 @@ function prune(store: TokenStore): TokenStore {
   return { tokens };
 }
 
-export async function createEmailToken(email: string, ttlMinutes = 15): Promise<string> {
+export async function createEmailToken(email: string, ttlMinutes = 30): Promise<string> {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + ttlMinutes * 60_000).toISOString();
   const prev = chain;

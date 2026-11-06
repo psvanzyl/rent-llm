@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 
@@ -10,6 +10,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("error");
+    if (code === "invalid_or_expired_link") {
+      setError("That sign-in link is invalid or has expired. Enter your email again to get a new link.");
+    } else if (code) {
+      setError("Sign-in failed. Please try again.");
+    }
+  }, []);
 
   async function handleCredential(credential: string) {
     setLoading(true);
