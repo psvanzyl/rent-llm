@@ -4,6 +4,7 @@ import { getUser } from "@/lib/accounts";
 import { hasActiveSubscription, tierConcurrent } from "@/lib/subscriptions";
 import { recordUsage } from "@/lib/usage";
 import { jsonRoute } from "@/lib/http";
+import { clientIp } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,7 @@ const handler_POST = async (req: Request) => {
     const data = (await upstream.json()) as { usage?: { prompt_tokens?: number; completion_tokens?: number } };
     const pt = data?.usage?.prompt_tokens ?? 0;
     const ct = data?.usage?.completion_tokens ?? 0;
-    recordUsage(rec.id, pt, ct).catch(() => {});
+    recordUsage(rec.id, pt, ct, { userId: rec.userId, keyName: rec.name, model: (body as { model?: string })?.model, ip: clientIp(req), stream: false }).catch(() => {});
     inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
     return NextResponse.json(data);
   }
@@ -79,7 +80,7 @@ const handler_POST = async (req: Request) => {
       const { done, value } = await reader.read();
       if (done) {
         controller.close();
-        recordUsage(rec.id, promptTokens, completionTokens).catch(() => {});
+        recordUsage(rec.id, promptTokens, completionTokens, { userId: rec.userId, keyName: rec.name, model: (body as { model?: string })?.model, ip: clientIp(req), stream: true }).catch(() => {});
         inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
         return;
       }

@@ -113,3 +113,9 @@ export async function revokeApiKey(userId: string, keyId: string): Promise<boole
   await writeStore(store);
   return true;
 }
+
+/** Every key of every user — admin reporting only. */
+export async function listAllApiKeys(): Promise<ApiKeyRecord[]> {
+  const store = await readStore();
+  return Object.values(store.keys);
+}
