@@ -56,7 +56,8 @@ function fmt(n: number): string {
 
 function dt(iso: string | null): string {
   if (!iso) return "—";
-  return iso.slice(0, 16).replace("T", " ");
+  // Drop the year — the Days table and page subtitle carry the date context.
+  return iso.slice(5, 16).replace("T", " ");
 }
 
 /** Value with a proportional bar behind it — the house filter-row style. */
