@@ -181,8 +181,8 @@ export default function AdminPage() {
                     <td className="px-3 py-2 text-gray-200">{fmt(u.window.requests)}</td>
                     <td className="px-3 py-2"><Bar value={u.window.promptTokens} max={maxUserTokens} label={fmt(u.window.promptTokens)} /></td>
                     <td className="px-3 py-2"><Bar value={u.window.completionTokens} max={maxUserTokens} label={fmt(u.window.completionTokens)} /></td>
-                    <td className="px-3 py-2 text-gray-400">{dt(u.window.firstAt)}</td>
-                    <td className="px-3 py-2 text-gray-400">{dt(u.window.lastAt || u.allTime.lastUsedAt)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-gray-400">{dt(u.window.firstAt)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-gray-400">{dt(u.window.lastAt || u.allTime.lastUsedAt)}</td>
                     <td className="px-3 py-2 text-gray-300">{fmt(u.allTime.promptTokens + u.allTime.completionTokens)}</td>
                   </tr>
                 ))}
