@@ -336,14 +336,16 @@ export default function AdminPage() {
                     <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">{dt(c.ts)}</td>
                     <td className="px-3 py-2 text-gray-200">{c.userEmail}</td>
                     <td className="px-3 py-2 text-gray-300">
-                      {c.keyName}
-                      {c.stream && <Tag text="stream" tone="muted" />}
-                      {c.backfilled && <Tag text="aggregated" tone="amber" />}
+                      <span className="inline-flex flex-wrap items-center gap-1">
+                        <span className="whitespace-nowrap">{c.keyName}</span>
+                        {c.stream && <Tag text="stream" tone="muted" />}
+                        {c.backfilled && <Tag text="aggregated" tone="amber" />}
+                      </span>
                     </td>
                     <td className="px-3 py-2 font-mono text-xs text-gray-400">{c.model || "—"}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">
                       {fmt(c.pt)}
-                      {c.ca > 0 && <div className="text-[0.65rem] text-gray-500">{fmt(c.ca)} cache read</div>}
+                      {c.ca > 0 && <div className="whitespace-nowrap text-[0.65rem] text-gray-500">{fmt(c.ca)} cache read</div>}
                       {c.requests > 1 && <div className="text-[0.65rem] text-gray-500">{c.requests} calls</div>}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">{fmt(c.ct)}</td>
