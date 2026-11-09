@@ -30,6 +30,7 @@ const handler_POST = async (req: Request) => {
   inflight.set(rec.userId, current + 1);
 
   let body: unknown;
+  const t0 = Date.now();
   try {
     body = await req.json();
   } catch {
@@ -60,10 +61,11 @@ const handler_POST = async (req: Request) => {
   }
 
   if (!stream) {
-    const data = (await upstream.json()) as { usage?: { prompt_tokens?: number; completion_tokens?: number } };
+    const data = (await upstream.json()) as { usage?: { prompt_tokens?: number; completion_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } } };
     const pt = data?.usage?.prompt_tokens ?? 0;
     const ct = data?.usage?.completion_tokens ?? 0;
-    recordUsage(rec.id, pt, ct, { userId: rec.userId, keyName: rec.name, model: (body as { model?: string })?.model, ip: clientIp(req), stream: false }).catch(() => {});
+    const ca = data?.usage?.prompt_tokens_details?.cached_tokens ?? 0;
+    recordUsage(rec.id, pt, ct, { userId: rec.userId, keyName: rec.name, model: (body as { model?: string })?.model, ip: clientIp(req), stream: false, cached: ca, ms: Date.now() - t0 }).catch(() => {});
     inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
     return NextResponse.json(data);
   }
@@ -74,13 +76,14 @@ const handler_POST = async (req: Request) => {
   let buf = "";
   let promptTokens = 0;
   let completionTokens = 0;
+  let cachedTokens = 0;
 
   const readable = new ReadableStream<Uint8Array>({
     async pull(controller) {
       const { done, value } = await reader.read();
       if (done) {
         controller.close();
-        recordUsage(rec.id, promptTokens, completionTokens, { userId: rec.userId, keyName: rec.name, model: (body as { model?: string })?.model, ip: clientIp(req), stream: true }).catch(() => {});
+        recordUsage(rec.id, promptTokens, completionTokens, { userId: rec.userId, keyName: rec.name, model: (body as { model?: string })?.model, ip: clientIp(req), stream: true, cached: cachedTokens, ms: Date.now() - t0 }).catch(() => {});
         inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
         return;
       }
@@ -95,10 +98,11 @@ const handler_POST = async (req: Request) => {
         const payload = trimmed.slice(5).trim();
         if (payload === "[DONE]") continue;
         try {
-          const obj = JSON.parse(payload) as { usage?: { prompt_tokens?: number; completion_tokens?: number } };
+          const obj = JSON.parse(payload) as { usage?: { prompt_tokens?: number; completion_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } } };
           if (obj?.usage) {
             promptTokens = obj.usage.prompt_tokens ?? promptTokens;
             completionTokens = obj.usage.completion_tokens ?? completionTokens;
+            cachedTokens = obj.usage.prompt_tokens_details?.cached_tokens ?? cachedTokens;
           }
         } catch {
           // ignore parse errors

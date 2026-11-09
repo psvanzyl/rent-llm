@@ -30,10 +30,37 @@ interface MyUsageKey {
   lastUsedAt: string | null;
 }
 
+interface MySession {
+  keyId: string;
+  keyName: string;
+  userId: string;
+  start: string;
+  end: string;
+  calls: number;
+  pt: number;
+  ct: number;
+  models: string[];
+}
+
+interface MyCall {
+  ts: string;
+  keyName: string;
+  model: string | null;
+  pt: number;
+  ct: number;
+  ca: number;
+  ms: number | null;
+  stream: boolean;
+  requests: number;
+  backfilled: boolean;
+}
+
 interface MyUsage {
   days: number;
   logSince: string | null;
   totals: { requests: number; promptTokens: number; completionTokens: number };
+  sessions: MySession[];
+  calls: MyCall[];
   perDay: MyUsageDay[];
   byKey: MyUsageKey[];
 }
@@ -261,6 +288,66 @@ export default function Dashboard() {
               </p>
               {myUsage.logSince && (
                 <p className="mt-1 text-xs text-gray-500">Per-call history starts {myUsage.logSince.slice(0, 10)}. Older totals appear on each key above.</p>
+              )}
+              {myUsage.sessions.length > 0 && (
+                <div className="mt-3 overflow-x-auto rounded-lg border border-gray-800">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white/5 text-left text-xs uppercase text-gray-400">
+                      <tr>
+                        <th className="px-3 py-2 whitespace-nowrap">Session start</th>
+                        <th className="px-3 py-2 whitespace-nowrap">End</th>
+                        <th className="px-3 py-2">Key</th>
+                        <th className="px-3 py-2">Calls</th>
+                        <th className="px-3 py-2 text-right">Input</th>
+                        <th className="px-3 py-2 text-right">Output</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myUsage.sessions.map((s, i) => (
+                        <tr key={s.keyId + s.start + i} className="border-t border-white/5">
+                          <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">{s.start.slice(5, 16).replace("T", " ")}</td>
+                          <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">{s.end.slice(5, 16).replace("T", " ")}</td>
+                          <td className="px-3 py-2 text-gray-200">{s.keyName}</td>
+                          <td className="px-3 py-2 tabular-nums text-gray-200">{s.calls}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">{s.pt.toLocaleString()}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">{s.ct.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {myUsage.calls.length > 0 && (
+                <div className="mt-3 overflow-x-auto rounded-lg border border-gray-800">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white/5 text-left text-xs uppercase text-gray-400">
+                      <tr>
+                        <th className="px-3 py-2 whitespace-nowrap">Time</th>
+                        <th className="px-3 py-2">Key</th>
+                        <th className="px-3 py-2">Model</th>
+                        <th className="px-3 py-2 text-right">Input</th>
+                        <th className="px-3 py-2 text-right">Output</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {myUsage.calls.slice(0, 50).map((c, i) => (
+                        <tr key={c.ts + i}>
+                          <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">{c.ts.slice(5, 16).replace("T", " ")}</td>
+                          <td className="px-3 py-2 text-gray-200">
+                            {c.keyName}
+                            {c.backfilled && <span className="ml-1.5 rounded bg-amber-500/20 px-1.5 py-0.5 text-[0.65rem] font-medium text-amber-300">aggregated</span>}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs text-gray-400">{c.model || "—"}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">
+                            {c.pt.toLocaleString()}
+                            {c.requests > 1 && <div className="text-[0.65rem] text-gray-500">{c.requests} calls</div>}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">{c.ct.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
               {myUsage.byKey.length > 0 && (
                 <div className="mt-3 overflow-x-auto rounded-lg border border-gray-800">

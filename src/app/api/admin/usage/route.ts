@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
 import { checkAdmin } from "@/lib/admin";
 import { readAccounts } from "@/lib/accounts";
 import { listAllApiKeys } from "@/lib/apikeys";
-import { readUsageLog, getUsageForKeys } from "@/lib/usage";
+import { readUsageLog, getUsageForKeys, eventRequests, groupSessions } from "@/lib/usage";
 
 export const dynamic = "force-dynamic";
 
@@ -61,11 +61,11 @@ export async function GET(req: Request) {
       day = { date: d, requests: 0, promptTokens: 0, completionTokens: 0, users: {} };
       byDay.set(d, day);
     }
-    day.requests += 1;
+    day.requests += eventRequests(ev);
     day.promptTokens += ev.pt;
     day.completionTokens += ev.ct;
     const u = (day.users[ev.userId] ||= { requests: 0, tokens: 0 });
-    u.requests += 1;
+    u.requests += eventRequests(ev);
     u.tokens += ev.pt + ev.ct;
   }
   const perDay = [...byDay.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -102,13 +102,13 @@ export async function GET(req: Request) {
     for (const ev of evs) {
       const d = dayOf(ev.ts);
       const day = byDayU.get(d) || { requests: 0, pt: 0, ct: 0 };
-      day.requests += 1;
+      day.requests += eventRequests(ev);
       day.pt += ev.pt;
       day.ct += ev.ct;
       byDayU.set(d, day);
       const kid = ev.keyId;
       const kk = byKey.get(kid) || { requests: 0, pt: 0, ct: 0, firstAt: ev.ts, lastAt: ev.ts };
-      kk.requests += 1;
+      kk.requests += eventRequests(ev);
       kk.pt += ev.pt;
       kk.ct += ev.ct;
       if (ev.ts < kk.firstAt) kk.firstAt = ev.ts;
@@ -119,7 +119,7 @@ export async function GET(req: Request) {
     }
     const windowTotals = evs.reduce(
       (acc, ev) => ({
-        requests: acc.requests + 1,
+        requests: acc.requests + eventRequests(ev),
         promptTokens: acc.promptTokens + ev.pt,
         completionTokens: acc.completionTokens + ev.ct,
       }),
@@ -172,6 +172,30 @@ export async function GET(req: Request) {
   );
   const activeUserIds = new Set(inWindow.map((ev) => ev.userId));
 
+  // Activity sessions (per key, 30-min gap) and the raw request log —
+  // newest first, capped so the page payload stays bounded.
+  const sessions = groupSessions(inWindow).map((s) => ({
+    ...s,
+    userEmail: accounts.users[s.userId]?.email || s.userId,
+  }));
+  const calls = [...inWindow]
+    .sort((a, b) => (a.ts < b.ts ? 1 : -1))
+    .slice(0, 200)
+    .map((ev) => ({
+      ts: ev.ts,
+      userId: ev.userId,
+      userEmail: accounts.users[ev.userId]?.email || ev.userId,
+      keyName: keysById[ev.keyId]?.name || ev.keyName || ev.keyId,
+      model: ev.model || null,
+      pt: ev.pt,
+      ct: ev.ct,
+      ca: ev.ca ?? 0,
+      ms: ev.ms ?? null,
+      stream: ev.stream ?? false,
+      requests: eventRequests(ev),
+      backfilled: Boolean(ev.backfilled),
+    }));
+
   const logEvents = events;
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
@@ -184,6 +208,8 @@ export async function GET(req: Request) {
       payingUsers: Object.values(accounts.users).filter((u) => u.subscriptionTier && u.subscriptionUntil && Date.parse(u.subscriptionUntil) > Date.now()).length,
     },
     perDay,
+    sessions,
+    calls,
     users: userViews.sort((a, b) => b.window.requests - a.window.requests || b.allTime.requests - a.allTime.requests),
   });
 }

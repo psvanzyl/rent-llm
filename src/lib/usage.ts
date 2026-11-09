@@ -20,9 +20,17 @@ export interface UsageMeta {
   model?: string;
   ip?: string;
   stream?: boolean;
+  cached?: number;
+  ms?: number;
 }
 
-/** One line in usage-log.jsonl — a single completed API request. */
+/**
+ * One line in usage-log.jsonl — normally a single completed API request.
+ * Rows with `backfilled: true` are aggregated history written once by the
+ * backfill script: `rq` carries how many requests the row stands for
+ * (normal rows imply rq = 1). pt/ct on such rows are totals spread over the
+ * period before per-call logging existed.
+ */
 export interface UsageEvent {
   ts: string;
   keyId: string;
@@ -33,6 +41,73 @@ export interface UsageEvent {
   ct: number;
   ip?: string;
   stream?: boolean;
+  ca?: number;
+  ms?: number;
+  rq?: number;
+  backfilled?: boolean;
+}
+
+/** Requests represented by one log row (backfill rows cover many calls). */
+export function eventRequests(ev: UsageEvent): number {
+  return ev.rq ?? 1;
+}
+
+export interface UsageSession {
+  keyId: string;
+  keyName: string;
+  userId: string;
+  start: string;
+  end: string;
+  calls: number;
+  pt: number;
+  ct: number;
+  models: string[];
+}
+
+/**
+ * Group per-call events into activity sessions: same key, sorted by time, a
+ * gap of more than `gapMinutes` starts a new session. API clients send no
+ * session id, so this is the honest reconstruction. Backfill rows are
+ * aggregated history, not a session — excluded.
+ */
+export function groupSessions(events: UsageEvent[], gapMinutes = 30): UsageSession[] {
+  const byKey = new Map<string, UsageEvent[]>();
+  for (const ev of events) {
+    if (ev.backfilled) continue;
+    const arr = byKey.get(ev.keyId) || [];
+    arr.push(ev);
+    byKey.set(ev.keyId, arr);
+  }
+  const sessions: UsageSession[] = [];
+  for (const [keyId, evs] of byKey) {
+    evs.sort((a, b) => (a.ts < b.ts ? -1 : 1));
+    let cur: UsageEvent[] = [];
+    const flush = () => {
+      if (!cur.length) return;
+      const models = [...new Set(cur.map((e) => e.model).filter((m): m is string => Boolean(m)))];
+      sessions.push({
+        keyId,
+        keyName: cur[0].keyName || keyId,
+        userId: cur[0].userId,
+        start: cur[0].ts,
+        end: cur[cur.length - 1].ts,
+        calls: cur.length,
+        pt: cur.reduce((s, e) => s + e.pt, 0),
+        ct: cur.reduce((s, e) => s + e.ct, 0),
+        models,
+      });
+      cur = [];
+    };
+    for (const ev of evs) {
+      if (cur.length) {
+        const prev = cur[cur.length - 1];
+        if (Date.parse(ev.ts) - Date.parse(prev.ts) > gapMinutes * 60 * 1000) flush();
+      }
+      cur.push(ev);
+    }
+    flush();
+  }
+  return sessions.sort((a, b) => (a.start < b.start ? 1 : -1));
 }
 
 function dataDir(): string {
@@ -119,6 +194,8 @@ export async function recordUsage(
       ct: completionTokens || 0,
       ip: meta.ip,
       stream: meta.stream,
+      ca: meta.cached || undefined,
+      ms: meta.ms,
     });
   }
 }

@@ -32,6 +32,34 @@ interface UserRow {
   };
 }
 
+interface SessionRow {
+  keyId: string;
+  keyName: string;
+  userId: string;
+  userEmail: string;
+  start: string;
+  end: string;
+  calls: number;
+  pt: number;
+  ct: number;
+  models: string[];
+}
+
+interface CallRow {
+  ts: string;
+  userId: string;
+  userEmail: string;
+  keyName: string;
+  model: string | null;
+  pt: number;
+  ct: number;
+  ca: number;
+  ms: number | null;
+  stream: boolean;
+  requests: number;
+  backfilled: boolean;
+}
+
 interface Report {
   generatedAt: string;
   days: number;
@@ -45,6 +73,8 @@ interface Report {
     payingUsers: number;
   };
   perDay: DayRow[];
+  sessions: SessionRow[];
+  calls: CallRow[];
   users: UserRow[];
 }
 
@@ -68,6 +98,20 @@ function Bar({ value, max, label }: { value: number; max: number; label: string 
       <div className="absolute inset-y-0 left-0 rounded bg-amber-500/25" style={{ width: `${pct}%` }} />
       <div className="relative px-2 py-1 text-right text-sm text-amber-200">{label}</div>
     </div>
+  );
+}
+
+function fmtMs(ms: number | null): string {
+  if (ms == null) return "—";
+  if (ms < 1000) return `${ms} ms`;
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
+function Tag({ text, tone }: { text: string; tone: "muted" | "amber" }) {
+  return (
+    <span className={`ml-1.5 rounded px-1.5 py-0.5 text-[0.65rem] font-medium ${tone === "amber" ? "bg-amber-500/20 text-amber-300" : "bg-white/10 text-gray-400"}`}>
+      {text}
+    </span>
   );
 }
 
@@ -233,33 +277,81 @@ export default function AdminPage() {
             </table>
           </div>
 
-          <h2 className="mt-10 text-lg font-semibold">Keys in window</h2>
+          <h2 className="mt-10 text-lg font-semibold">Sessions</h2>
+          <p className="text-sm text-gray-400">Activity per key: calls less than 30 minutes apart form one session. Aggregated history rows are excluded.</p>
           <div className="mt-3 overflow-x-auto rounded-lg border border-white/10">
             <table className="w-full text-sm">
               <thead className="bg-white/5 text-left text-xs uppercase text-gray-400">
                 <tr>
+                  <th className="px-3 py-2 whitespace-nowrap">Start</th>
+                  <th className="px-3 py-2 whitespace-nowrap">End</th>
                   <th className="px-3 py-2">User</th>
                   <th className="px-3 py-2">Key</th>
-                  <th className="px-3 py-2">Reqs</th>
-                  <th className="px-3 py-2">Prompt</th>
-                  <th className="px-3 py-2">Completion</th>
-                  <th className="px-3 py-2">First</th>
-                  <th className="px-3 py-2">Last</th>
+                  <th className="px-3 py-2">Model</th>
+                  <th className="px-3 py-2">Calls</th>
+                  <th className="px-3 py-2 text-right">Input</th>
+                  <th className="px-3 py-2 text-right">Output</th>
                 </tr>
               </thead>
               <tbody>
-                {report.users.flatMap((u) =>
-                  u.window.byKey.map((k) => (
-                    <tr key={u.id + k.keyId} className="border-t border-white/5">
-                      <td className="px-3 py-2 text-gray-200">{u.name || u.email}</td>
-                      <td className="px-3 py-2 text-gray-300">{k.keyName}</td>
-                      <td className="px-3 py-2 text-gray-200">{fmt(k.requests)}</td>
-                      <td className="px-3 py-2 text-gray-200">{fmt(k.pt)}</td>
-                      <td className="px-3 py-2 text-gray-200">{fmt(k.ct)}</td>
-                      <td className="px-3 py-2 text-gray-400">{dt(k.firstAt)}</td>
-                      <td className="px-3 py-2 text-gray-400">{dt(k.lastAt)}</td>
-                    </tr>
-                  )),
+                {report.sessions.map((s, i) => (
+                  <tr key={s.keyId + s.start + i} className="border-t border-white/5">
+                    <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">{dt(s.start)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">{dt(s.end)}</td>
+                    <td className="px-3 py-2 text-gray-200">{s.userEmail}</td>
+                    <td className="px-3 py-2 text-gray-300">{s.keyName}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-400">{s.models.join(", ") || "—"}</td>
+                    <td className="px-3 py-2 tabular-nums text-gray-200">{s.calls}</td>
+                    <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">{fmt(s.pt)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">{fmt(s.ct)}</td>
+                  </tr>
+                ))}
+                {report.sessions.length === 0 && (
+                  <tr><td colSpan={8} className="px-3 py-6 text-center text-gray-500">No per-call sessions yet — sessions start with per-call logging.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <h2 className="mt-10 text-lg font-semibold">Request log</h2>
+          <p className="text-sm text-gray-400">
+            Newest calls in the window (max 200). "Input" shows cache reads underneath when present.
+          </p>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-white/10">
+            <table className="w-full text-sm">
+              <thead className="bg-white/5 text-left text-xs uppercase text-gray-400">
+                <tr>
+                  <th className="px-3 py-2 whitespace-nowrap">Time</th>
+                  <th className="px-3 py-2">User</th>
+                  <th className="px-3 py-2">Key</th>
+                  <th className="px-3 py-2">Model</th>
+                  <th className="px-3 py-2 text-right">Input</th>
+                  <th className="px-3 py-2 text-right">Output</th>
+                  <th className="px-3 py-2 text-right">Duration</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {report.calls.map((c, i) => (
+                  <tr key={c.ts + c.userEmail + i}>
+                    <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">{dt(c.ts)}</td>
+                    <td className="px-3 py-2 text-gray-200">{c.userEmail}</td>
+                    <td className="px-3 py-2 text-gray-300">
+                      {c.keyName}
+                      {c.stream && <Tag text="stream" tone="muted" />}
+                      {c.backfilled && <Tag text="aggregated" tone="amber" />}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-400">{c.model || "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">
+                      {fmt(c.pt)}
+                      {c.ca > 0 && <div className="text-[0.65rem] text-gray-500">{fmt(c.ca)} cache read</div>}
+                      {c.requests > 1 && <div className="text-[0.65rem] text-gray-500">{c.requests} calls</div>}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">{fmt(c.ct)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-gray-400">{fmtMs(c.ms)}</td>
+                  </tr>
+                ))}
+                {report.calls.length === 0 && (
+                  <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-500">No calls recorded in this window.</td></tr>
                 )}
               </tbody>
             </table>
