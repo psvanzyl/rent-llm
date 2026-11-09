@@ -64,7 +64,7 @@ function dt(iso: string | null): string {
 function Bar({ value, max, label }: { value: number; max: number; label: string }) {
   const pct = value > 0 && max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
   return (
-    <div className="relative w-full min-w-24 rounded bg-white/5">
+    <div className="relative w-full min-w-16 rounded bg-white/5">
       <div className="absolute inset-y-0 left-0 rounded bg-amber-500/25" style={{ width: `${pct}%` }} />
       <div className="relative px-2 py-1 text-right text-sm text-amber-200">{label}</div>
     </div>
