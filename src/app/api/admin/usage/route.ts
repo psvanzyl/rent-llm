@@ -162,11 +162,6 @@ export async function GET(req: Request) {
     };
   });
 
-  // Only return users with any signal: a window event, an all-time usage record, or any request.
-  const activeUsers = userViews.filter(
-    (u) => u.window.requests > 0 || u.allTime.requests > 0 || u.allTime.lastUsedAt,
-  );
-
   const totals = perDay.reduce(
     (acc, d) => ({
       requests: acc.requests + d.requests,
@@ -189,6 +184,6 @@ export async function GET(req: Request) {
       payingUsers: Object.values(accounts.users).filter((u) => u.subscriptionTier && u.subscriptionUntil && Date.parse(u.subscriptionUntil) > Date.now()).length,
     },
     perDay,
-    users: activeUsers.sort((a, b) => b.window.requests - a.window.requests || b.allTime.requests - a.allTime.requests),
+    users: userViews.sort((a, b) => b.window.requests - a.window.requests || b.allTime.requests - a.allTime.requests),
   });
 }

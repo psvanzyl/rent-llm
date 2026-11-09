@@ -61,7 +61,7 @@ function dt(iso: string | null): string {
 
 /** Value with a proportional bar behind it — the house filter-row style. */
 function Bar({ value, max, label }: { value: number; max: number; label: string }) {
-  const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
+  const pct = value > 0 && max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
   return (
     <div className="relative w-full min-w-24 rounded bg-white/5">
       <div className="absolute inset-y-0 left-0 rounded bg-amber-500/25" style={{ width: `${pct}%` }} />
@@ -153,8 +153,8 @@ export default function AdminPage() {
                   <th className="px-3 py-2">User</th>
                   <th className="px-3 py-2">Plan</th>
                   <th className="px-3 py-2">Reqs</th>
-                  <th className="px-3 py-2 w-40">Prompt</th>
-                  <th className="px-3 py-2 w-40">Completion</th>
+                  <th className="px-3 py-2 w-40 text-right">Prompt</th>
+                  <th className="px-3 py-2 w-40 text-right">Completion</th>
                   <th className="px-3 py-2">First used</th>
                   <th className="px-3 py-2">Last used</th>
                   <th className="px-3 py-2">All-time tokens</th>
@@ -175,7 +175,7 @@ export default function AdminPage() {
                         {u.tier || "free"}
                       </span>
                       {u.subscriptionUntil && (
-                        <div className="mt-1 text-xs text-gray-500">until {u.subscriptionUntil.slice(0, 10)}</div>
+                        <div className="mt-1 whitespace-nowrap text-xs text-gray-500">until {u.subscriptionUntil.slice(0, 10)}</div>
                       )}
                     </td>
                     <td className="px-3 py-2 text-gray-200">{fmt(u.window.requests)}</td>
@@ -202,7 +202,7 @@ export default function AdminPage() {
                   <th className="px-3 py-2">Date</th>
                   <th className="px-3 py-2">Active users</th>
                   <th className="px-3 py-2">Requests</th>
-                  <th className="px-3 py-2 w-56">Tokens</th>
+                  <th className="px-3 py-2 w-56 text-right">Tokens</th>
                   <th className="px-3 py-2">Per user (tokens)</th>
                 </tr>
               </thead>
