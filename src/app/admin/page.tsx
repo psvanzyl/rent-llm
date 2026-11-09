@@ -153,11 +153,11 @@ export default function AdminPage() {
                   <th className="px-3 py-2">User</th>
                   <th className="px-3 py-2">Plan</th>
                   <th className="px-3 py-2">Reqs</th>
-                  <th className="px-3 py-2 w-40 text-right">Prompt</th>
-                  <th className="px-3 py-2 w-40 text-right">Completion</th>
+                  <th className="px-3 py-2 w-32 text-right">Prompt</th>
+                  <th className="px-3 py-2 w-32 text-right">Completion</th>
                   <th className="px-3 py-2">First used</th>
                   <th className="px-3 py-2">Last used</th>
-                  <th className="px-3 py-2">All-time tokens</th>
+                  <th className="px-3 py-2 whitespace-nowrap">All-time tokens</th>
                 </tr>
               </thead>
               <tbody>
