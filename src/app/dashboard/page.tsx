@@ -13,9 +13,34 @@ interface KeyRow {
   usage?: { requests: number; promptTokens: number; completionTokens: number; lastUsedAt?: string };
 }
 
+interface MyUsageDay {
+  date: string;
+  requests: number;
+  promptTokens: number;
+  completionTokens: number;
+}
+
+interface MyUsageKey {
+  keyId: string;
+  keyName: string;
+  revoked: boolean;
+  requests: number;
+  promptTokens: number;
+  completionTokens: number;
+  lastUsedAt: string | null;
+}
+
+interface MyUsage {
+  days: number;
+  logSince: string | null;
+  totals: { requests: number; promptTokens: number; completionTokens: number };
+  perDay: MyUsageDay[];
+  byKey: MyUsageKey[];
+}
+
 export default function Dashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<{ email: string; name?: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; name?: string; isAdmin?: boolean } | null>(null);
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
@@ -23,6 +48,7 @@ export default function Dashboard() {
   const [payMethod, setPayMethod] = useState<"ideal" | "paypal">("ideal");
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<{ active: boolean; tier: string | null; until: string | null } | null>(null);
+  const [myUsage, setMyUsage] = useState<MyUsage | null>(null);
 
   async function load() {
     const me = await fetch("/api/auth/me");
@@ -35,6 +61,10 @@ export default function Dashboard() {
     try {
       const br = await fetch("/api/billing");
       if (br.ok) setBilling(await br.json());
+    } catch {}
+    try {
+      const ur = await fetch("/api/usage?days=30");
+      if (ur.ok) setMyUsage(await ur.json());
     } catch {}
     setLoading(false);
   }
@@ -96,7 +126,14 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-gray-400">{user?.email}</p>
         </div>
-        <button onClick={logout} className="text-sm text-gray-400 hover:text-white">Sign out</button>
+        <div className="flex items-center gap-4">
+          {user?.isAdmin && (
+            <a href="/admin" className="rounded-md border border-amber-500 px-3 py-1.5 text-sm font-medium text-amber-400 hover:bg-amber-500/10">
+              Admin usage
+            </a>
+          )}
+          <button onClick={logout} className="text-sm text-gray-400 hover:text-white">Sign out</button>
+        </div>
       </div>
 
       {createdKey && (
@@ -215,6 +252,68 @@ export default function Dashboard() {
           <p className="text-sm text-gray-400">
             Model: <code className="text-amber-300">qwen3.8-flash-next-ud-q4_k_xl</code> (also: qwen3.8-flash, qwen3.8-flash-next-iq3_s, sensei-qwen3.8-flash)
           </p>
+          {myUsage && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-300">
+                Your API calls, last {myUsage.days} days: <span className="text-amber-300">{myUsage.totals.requests}</span> requests ·{" "}
+                <span className="text-amber-300">{myUsage.totals.promptTokens}</span> prompt tokens ·{" "}
+                <span className="text-amber-300">{myUsage.totals.completionTokens}</span> completion tokens
+              </p>
+              {myUsage.logSince && (
+                <p className="mt-1 text-xs text-gray-500">Per-call history starts {myUsage.logSince.slice(0, 10)}. Older totals appear on each key above.</p>
+              )}
+              {myUsage.byKey.length > 0 && (
+                <div className="mt-3 overflow-x-auto rounded-lg border border-gray-800">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white/5 text-left text-xs uppercase text-gray-400">
+                      <tr>
+                        <th className="px-3 py-2">Key</th>
+                        <th className="px-3 py-2">Requests</th>
+                        <th className="px-3 py-2">Prompt tokens</th>
+                        <th className="px-3 py-2">Completion tokens</th>
+                        <th className="px-3 py-2 whitespace-nowrap">Last used</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myUsage.byKey.map((k) => (
+                        <tr key={k.keyId} className="border-t border-white/5">
+                          <td className="px-3 py-2 text-gray-200">{k.keyName}{k.revoked ? " (revoked)" : ""}</td>
+                          <td className="px-3 py-2 text-gray-200">{k.requests}</td>
+                          <td className="px-3 py-2 text-gray-200">{k.promptTokens}</td>
+                          <td className="px-3 py-2 text-gray-200">{k.completionTokens}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-gray-400">{k.lastUsedAt ? k.lastUsedAt.slice(5, 16).replace("T", " ") : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {myUsage.perDay.length > 0 && (
+                <div className="mt-3 overflow-x-auto rounded-lg border border-gray-800">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white/5 text-left text-xs uppercase text-gray-400">
+                      <tr>
+                        <th className="px-3 py-2">Day</th>
+                        <th className="px-3 py-2">Requests</th>
+                        <th className="px-3 py-2">Prompt tokens</th>
+                        <th className="px-3 py-2">Completion tokens</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myUsage.perDay.map((d) => (
+                        <tr key={d.date} className="border-t border-white/5">
+                          <td className="px-3 py-2 text-gray-200">{d.date}</td>
+                          <td className="px-3 py-2 text-gray-200">{d.requests}</td>
+                          <td className="px-3 py-2 text-gray-200">{d.promptTokens}</td>
+                          <td className="px-3 py-2 text-gray-200">{d.completionTokens}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </section>
       )}
     </div>

@@ -9,11 +9,21 @@
 import { verifySession, sessionCookieValue } from "@/lib/auth";
 import { getUser } from "@/lib/accounts";
 
+const DEFAULT_ADMINS = [
+  "psvanzyl@gmail.com",
+  "psvanzyl@laserraptor.eu",
+  "psvanzyl@proton.me",
+].join(",");
+
 export function adminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS || "psvanzyl@gmail.com")
+  return (process.env.ADMIN_EMAILS || DEFAULT_ADMINS)
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
+}
+
+export function isAdminEmail(email: string): boolean {
+  return adminEmails().includes(email.trim().toLowerCase());
 }
 
 export type AdminCheck =
