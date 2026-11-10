@@ -136,7 +136,7 @@ export default function AccountPage() {
   ];
 
   if (loading) {
-    return <div className="mx-auto max-w-5xl px-4 py-20 text-gray-400">Loading…</div>;
+    return <div className="mx-auto max-w-6xl px-6 py-20 text-gray-400">Loading…</div>;
   }
   if (!me) return null;
 
@@ -153,7 +153,7 @@ export default function AccountPage() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="text-2xl font-bold">Account</h1>
       <p className="mt-1 text-sm text-gray-400">{me.user.email}</p>
 
