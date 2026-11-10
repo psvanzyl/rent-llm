@@ -293,9 +293,9 @@ export default function AccountPage() {
                           <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">
                             {new Date(inv.at).toLocaleDateString()}
                           </td>
-                          <td className="px-3 py-2 text-gray-200">
+                          <td className="px-3 py-2.5 pr-6 text-gray-200">
                             {inv.description || `Broomy — ${inv.plan}`}
-                            <div className="font-mono text-[0.65rem] text-gray-500">{inv.id}</div>
+                            <div className="font-mono text-[0.65rem] leading-tight text-gray-400">{inv.id}</div>
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap text-gray-300 capitalize">{inv.method}</td>
                           <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-100">{eur(inv.amountCents)}</td>
