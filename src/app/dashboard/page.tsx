@@ -154,6 +154,9 @@ export default function Dashboard() {
           <p className="text-sm text-gray-400">{user?.email}</p>
         </div>
         <div className="flex items-center gap-4">
+          <a href="/account" className="rounded-md border border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-white/5">
+            Account
+          </a>
           {user?.isAdmin && (
             <a href="/admin" className="rounded-md border border-amber-500 px-3 py-1.5 text-sm font-medium text-amber-400 hover:bg-amber-500/10">
               Admin usage

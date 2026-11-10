@@ -96,6 +96,19 @@ const handler_POST = async (req: Request) => {
     processedPayments: [...processed, id],
   });
 
+  // record the received invoice (idempotent by transaction id)
+  const { upsertInvoice } = await import("@/lib/accounts");
+  const paidAt = (typeof p.paidAt === "string" && p.paidAt) || (typeof p.createdAt === "string" && p.createdAt) || new Date().toISOString();
+  const methodRaw = Array.isArray(p.method) ? p.method[0] : p.method;
+  await upsertInvoice(userId, {
+    id,
+    at: paidAt,
+    amountCents,
+    method: typeof methodRaw === "string" ? methodRaw : "unknown",
+    plan: plan.id,
+    description: typeof p.description === "string" ? p.description : `Broomy — ${plan.name}`,
+  }).catch((e) => console.error("invoice upsert failed:", e));
+
   // first payment -> create recurring subscription
   if (md.purpose === "first-payment" && !user.mollieSubscriptionId && user.mollieCustomerId) {
     const sub = await mollieCreateSubscription(userId, user.mollieCustomerId, key, plan.id);

@@ -39,6 +39,40 @@ export interface UserRecord {
   subscriptionUntil?: string;
   /** payment references already processed (idempotency) */
   processedPayments?: string[];
+  /** billing/contact address the user saved on /account (used on invoices) */
+  accountInfo?: AccountInfo;
+  /** received invoices, one per successful Mollie payment */
+  invoices?: InvoiceRecord[];
+}
+
+/** Address block saved from the /account page. All fields optional. */
+export interface AccountInfo {
+  company?: string;
+  contactName?: string;
+  street?: string;
+  zip?: string;
+  city?: string;
+  /** ISO 3166-1 alpha-2 country code, e.g. "NL" */
+  country?: string;
+  /** VAT identification number (KvK/BTW number) */
+  vatId?: string;
+}
+
+/** One received invoice = one successful payment. `id` is the Mollie transaction id. */
+export interface InvoiceRecord {
+  /** Mollie transaction id (tr_...) — the unique key for idempotent writes */
+  id: string;
+  /** human-readable per-user number, e.g. BRM-2026-0001 */
+  number: string;
+  /** ISO timestamp of the payment */
+  at: string;
+  amountCents: number;
+  /** Mollie method, e.g. ideal / paypal / creditcard */
+  method: string;
+  /** plan id the payment granted */
+  plan: string;
+  /** payment description as shown at Mollie */
+  description?: string;
 }
 
 interface AccountStore {
@@ -200,6 +234,46 @@ export async function updateUser(id: string, patch: Partial<UserRecord>): Promis
     const next: UserRecord = { ...current, ...patch, id: current.id, updatedAt: new Date().toISOString() };
     store.users[id] = next;
     return next;
+  });
+}
+
+/** Replace the user's saved billing address (from /account). */
+export async function saveAccountInfo(id: string, info: AccountInfo): Promise<AccountInfo> {
+  await withAccountsStore((store) => {
+    const current = store.users[id];
+    if (!current) throw new Error("unknown_user");
+    current.accountInfo = info;
+    current.updatedAt = new Date().toISOString();
+  });
+  return info;
+}
+
+/**
+ * Record one received invoice, idempotent by Mollie transaction id.
+ *
+ * Written by the payment webhook for new payments, and by the invoices API as a
+ * lazy backfill for payments made before invoice records existed (their tr_ ids
+ * live in `processedPayments`).
+ */
+export async function upsertInvoice(
+  userId: string,
+  inv: Omit<InvoiceRecord, "number"> & { number?: string },
+): Promise<InvoiceRecord | undefined> {
+  return withAccountsStore((store) => {
+    const current = store.users[userId];
+    if (!current) return undefined;
+    const invoices = current.invoices || [];
+    const existing = invoices.find((i) => i.id === inv.id);
+    if (existing) return existing;
+    const year = (inv.at || "").slice(0, 4) || String(new Date().getFullYear());
+    const seq = invoices.filter((i) => (i.at || "").startsWith(year)).length + 1;
+    const record: InvoiceRecord = {
+      ...inv,
+      number: inv.number || `BRM-${year}-${String(seq).padStart(4, "0")}`,
+    };
+    current.invoices = [...invoices, record];
+    current.updatedAt = new Date().toISOString();
+    return record;
   });
 }
 
