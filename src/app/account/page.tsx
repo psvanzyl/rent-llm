@@ -191,7 +191,7 @@ export default function AccountPage() {
                   </p>
                   {me.plan.until && (
                     <p className="mt-1 text-sm text-gray-400">
-                      Access until {new Date(me.plan.until).toLocaleDateString()}
+                      Access until {new Date(me.plan.until).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
                     </p>
                   )}
                 </div>
@@ -205,7 +205,7 @@ export default function AccountPage() {
                 <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
                   <p className="text-xs uppercase text-gray-500">Member since</p>
                   <p className="mt-1 text-lg font-semibold">
-                    {new Date(me.user.createdAt).toLocaleDateString()}
+                    {new Date(me.user.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
                   </p>
                 </div>
                 <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
@@ -291,7 +291,7 @@ export default function AccountPage() {
                         <tr key={inv.id}>
                           <td className="px-3 py-2 font-mono text-xs text-gray-300">{inv.number}</td>
                           <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">
-                            {new Date(inv.at).toLocaleDateString()}
+                            {new Date(inv.at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
                           </td>
                           <td className="px-3 py-2.5 pr-6 text-gray-200">
                             {inv.description || `Broomy — ${inv.plan}`}
