@@ -276,7 +276,7 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { label: "Context", value: "262k (sensei) / 65k (bonsai)" },
+                { label: "Context", value: "sensei 262k · bonsai 65k" },
                 { label: "Input", value: "Text + images" },
                 { label: "Output", value: "Text" },
                 { label: "Hosting", value: "EU only" },
