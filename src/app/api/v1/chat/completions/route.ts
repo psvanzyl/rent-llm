@@ -8,8 +8,23 @@ import { clientIp } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-const BACKEND = process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1";
-const BACKEND_KEY = process.env.LLM_BACKEND_KEY || "local-no-auth";
+interface BackendConfig {
+  url: string;
+  key: string;
+}
+
+function backendForModel(model: string): BackendConfig {
+  if (model.startsWith("bonsai")) {
+    return {
+      url: process.env.LLM_BACKEND2_URL || "http://192.168.178.10:8087/v1",
+      key: process.env.LLM_BACKEND2_KEY || "",
+    };
+  }
+  return {
+    url: process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1",
+    key: process.env.LLM_BACKEND_KEY || "local-no-auth",
+  };
+}
 
 const inflight = new Map<string, number>();
 
@@ -38,14 +53,16 @@ const handler_POST = async (req: Request) => {
   }
 
   const stream = (body as { stream?: boolean })?.stream === true;
+  const model = (body as { model?: string })?.model || "qwen3.8-flash-next-ud-q4_k_xl";
+  const bk = backendForModel(model);
 
   let upstream: Response;
   try {
-    upstream = await fetch(`${BACKEND}/chat/completions`, {
+    upstream = await fetch(bk.url + "/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${BACKEND_KEY}`,
+        Authorization: "Bearer " + bk.key,
       },
       body: JSON.stringify(body),
     });
@@ -65,12 +82,11 @@ const handler_POST = async (req: Request) => {
     const pt = data?.usage?.prompt_tokens ?? 0;
     const ct = data?.usage?.completion_tokens ?? 0;
     const ca = data?.usage?.prompt_tokens_details?.cached_tokens ?? 0;
-    recordUsage(rec.id, pt, ct, { userId: rec.userId, keyName: rec.name, model: (body as { model?: string })?.model, ip: clientIp(req), stream: false, cached: ca, ms: Date.now() - t0 }).catch(() => {});
+    recordUsage(rec.id, pt, ct, { userId: rec.userId, keyName: rec.name, model: model, ip: clientIp(req), stream: false, cached: ca, ms: Date.now() - t0 }).catch(() => {});
     inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
     return NextResponse.json(data);
   }
 
-  // Streaming: tee the stream to track usage from the final chunk, pass through to client.
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
@@ -83,12 +99,11 @@ const handler_POST = async (req: Request) => {
       const { done, value } = await reader.read();
       if (done) {
         controller.close();
-        recordUsage(rec.id, promptTokens, completionTokens, { userId: rec.userId, keyName: rec.name, model: (body as { model?: string })?.model, ip: clientIp(req), stream: true, cached: cachedTokens, ms: Date.now() - t0 }).catch(() => {});
+        recordUsage(rec.id, promptTokens, completionTokens, { userId: rec.userId, keyName: rec.name, model: model, ip: clientIp(req), stream: true, cached: cachedTokens, ms: Date.now() - t0 }).catch(() => {});
         inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
         return;
       }
       controller.enqueue(value);
-      // parse SSE for usage
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split("\n");
       buf = lines.pop() || "";
