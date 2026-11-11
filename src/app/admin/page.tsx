@@ -1,5 +1,6 @@
 "use client";
 
+import { displayModel } from "@/lib/models";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -300,7 +301,7 @@ export default function AdminPage() {
                     <td className="px-3 py-2 whitespace-nowrap tabular-nums text-gray-400">{dt(s.end)}</td>
                     <td className="px-3 py-2 text-gray-200">{s.userEmail}</td>
                     <td className="px-3 py-2 text-gray-300">{s.keyName}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-gray-400">{s.models.join(", ") || "—"}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-400">{s.models.map(displayModel).join(", ") || "—"}</td>
                     <td className="px-3 py-2 tabular-nums text-gray-200">{s.calls}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">{fmt(s.pt)}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">{fmt(s.ct)}</td>
@@ -342,7 +343,7 @@ export default function AdminPage() {
                         {c.backfilled && <Tag text="aggregated" tone="amber" />}
                       </span>
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs text-gray-400">{c.model || "—"}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-400">{displayModel(c.model)}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">
                       {fmt(c.pt)}
                       {c.ca > 0 && <div className="whitespace-nowrap text-[0.65rem] text-gray-500">{fmt(c.ca)} cache read</div>}

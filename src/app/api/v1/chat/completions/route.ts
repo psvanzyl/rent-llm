@@ -5,6 +5,7 @@ import { hasActiveSubscription, tierConcurrent } from "@/lib/subscriptions";
 import { recordUsage } from "@/lib/usage";
 import { jsonRoute } from "@/lib/http";
 import { clientIp } from "@/lib/auth";
+import { resolveModelId, backendModelFor } from "@/lib/models";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ const handler_POST = async (req: Request) => {
   }
 
   const stream = (body as { stream?: boolean })?.stream === true;
-  const model = (body as { model?: string })?.model || "qwen3.8-flash-next-ud-q4_k_xl";
+  const model = resolveModelId((body as { model?: string })?.model || "sensei");
   const bk = backendForModel(model);
 
   let upstream: Response;
@@ -64,7 +65,7 @@ const handler_POST = async (req: Request) => {
         "Content-Type": "application/json",
         Authorization: "Bearer " + bk.key,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...(body as Record<string, unknown>), model: backendModelFor(model) }),
     });
   } catch (e) {
     inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));

@@ -11,7 +11,7 @@ client = OpenAI(
 )
 
 reply = client.chat.completions.create(
-    model="qwen3.8-flash-next-ud-q4_k_xl",
+    model="sensei",
     messages=[{"role": "user", "content": "Hello!"}],
 )
 print(reply.choices[0].message.content)`,
@@ -30,7 +30,7 @@ console.log(reply.choices[0].message.content);`,
   curl: `curl https://broomy.laserraptor.eu/api/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"model":"qwen3.8-flash-next-ud-q4_k_xl","messages":[{"role":"user","content":"Hello!"}]}'`,
+  -d '{"model":"sensei","messages":[{"role":"user","content":"Hello!"}]}'`,
 };
 
 const FEATURES_BASIC = [
@@ -71,7 +71,7 @@ export default function Home() {
               <span className="text-amber-400">Skip the GPU.</span>
             </h1>
             <p className="mt-6 text-lg text-zinc-400 max-w-xl leading-relaxed">
-              Qwen 3.8, served from Europe. No token limits, no per-request billing —
+              Two models — sensei (qwen3.8) and bonsai (qwen3.6) — served from Europe. No token limits, no per-request billing —
               just a flat monthly price and an OpenAI-compatible endpoint you can
               drop into any existing SDK.
             </p>
@@ -149,7 +149,7 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="text-center mb-12">
           <h2 className="font-display text-3xl sm:text-4xl font-bold">Simple, flat pricing</h2>
-          <p className="mt-3 text-zinc-400">One model. Two plans. No token limits.</p>
+          <p className="mt-3 text-zinc-400">Two models. Two plans. No token limits.</p>
         </div>
         <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* Basic */}
@@ -207,6 +207,49 @@ export default function Home() {
             </a>
           </div>
         </div>
+        <div className="mt-10 max-w-3xl mx-auto rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+          <h3 className="font-display text-lg font-semibold">Per-token pricing reference</h3>
+          <p className="mt-1 text-sm text-zinc-500">
+            Plans above are flat monthly with unlimited tokens. If you pay per token elsewhere,
+            these are our published rates for comparison — USD per 1M tokens.
+          </p>
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-white/5 text-left text-xs uppercase text-zinc-500">
+                <tr>
+                  <th className="px-3 py-2">Model</th>
+                  <th className="px-3 py-2 text-right">Input / 1M</th>
+                  <th className="px-3 py-2 text-right">Output / 1M</th>
+                  <th className="px-3 py-2">Context</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-white/5">
+                  <td className="px-3 py-2 text-zinc-200">sensei (qwen3.8)</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-mono">$0.10</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-mono">$0.20</td>
+                  <td className="px-3 py-2 text-zinc-400">262k tokens</td>
+                </tr>
+                <tr className="border-t border-white/5">
+                  <td className="px-3 py-2 text-zinc-200">bonsai (qwen3.6)</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-mono">$0.05</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-mono">$0.10</td>
+                  <td className="px-3 py-2 text-zinc-400">65k tokens</td>
+                </tr>
+                <tr className="border-t border-white/5 text-zinc-500">
+                  <td className="px-3 py-2">DeepSeek V4.1 Flash (official, off-peak)</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-mono">$0.15</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-mono">$0.60</td>
+                  <td className="px-3 py-2">1M tokens</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-zinc-600">
+            DeepSeek rates from api-docs.deepseek.com (off-peak; peak hours are double).
+            On Broomy you never pay per token — the table is a comparison only.
+          </p>
+        </div>
         <p className="mt-6 text-center text-xs text-zinc-600">
           Prices are net, plus statutory VAT. Cancel any month — no lock-in, no auto-renewal surprises.
         </p>
@@ -217,18 +260,23 @@ export default function Home() {
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 sm:p-12">
           <div className="grid sm:grid-cols-2 gap-8 items-center">
             <div>
-              <span className="text-xs text-amber-400 uppercase tracking-widest font-medium">The model</span>
-              <h2 className="font-display text-3xl font-bold mt-2">Qwen 3.8 Flash</h2>
+              <span className="text-xs text-amber-400 uppercase tracking-widest font-medium">The models</span>
+              <h2 className="font-display text-3xl font-bold mt-2">sensei (qwen3.8)</h2>
               <p className="mt-4 text-zinc-400 leading-relaxed">
-                A Qwen 3.8 flash model running on European infrastructure. Slower than
-                Claude or GPT-4, but unlimited tokens and a fraction of the price.
+                The flagship: a Qwen 3.8 flash model running on European infrastructure.
+                Slower than Claude or GPT-4, but unlimited tokens and a fraction of the price.
                 Ideal for batch processing, code review, document analysis, and
                 anything where throughput matters more than latency.
+              </p>
+              <h2 className="font-display text-2xl font-bold mt-6">bonsai (qwen3.6)</h2>
+              <p className="mt-3 text-zinc-400 leading-relaxed">
+                The fast, economical second model. Same OpenAI-compatible endpoint,
+                chosen by setting the model name.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { label: "Context", value: "262k tokens" },
+                { label: "Context", value: "262k (sensei) / 65k (bonsai)" },
                 { label: "Input", value: "Text + images" },
                 { label: "Output", value: "Text" },
                 { label: "Hosting", value: "EU only" },

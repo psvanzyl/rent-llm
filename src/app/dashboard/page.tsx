@@ -1,5 +1,6 @@
 "use client";
 
+import { displayModel } from "@/lib/models";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -280,7 +281,7 @@ export default function Dashboard() {
             Base URL: <code className="text-amber-300">https://broomy.laserraptor.eu/api/v1</code>
           </p>
           <p className="text-sm text-gray-400">
-            Models: <code className="text-amber-300">qwen3.8-flash-next-ud-q4_k_xl</code> (also: qwen3.8-flash, qwen3.8-flash-next-iq3_s, sensei-qwen3.8-flash) · <code className="text-amber-300">bonsai-2-27b</code>
+            Models: <code className="text-amber-300">sensei</code> (qwen3.8, 262k ctx · $0.10 in / $0.20 out per 1M) · <code className="text-amber-300">bonsai</code> (qwen3.6, 65k ctx · $0.05 in / $0.10 out per 1M)
           </p>
           {myUsage && (
             <div className="mt-4">
@@ -340,7 +341,7 @@ export default function Dashboard() {
                             {c.keyName}
                             {c.backfilled && <span className="ml-1.5 rounded bg-amber-500/20 px-1.5 py-0.5 text-[0.65rem] font-medium text-amber-300">aggregated</span>}
                           </td>
-                          <td className="px-3 py-2 font-mono text-xs text-gray-400">{c.model || "—"}</td>
+                          <td className="px-3 py-2 font-mono text-xs text-gray-400">{displayModel(c.model)}</td>
                           <td className="px-3 py-2 text-right tabular-nums font-mono text-gray-200">
                             {c.pt.toLocaleString()}
                             {c.requests > 1 && <div className="text-[0.65rem] text-gray-500">{c.requests} calls</div>}
