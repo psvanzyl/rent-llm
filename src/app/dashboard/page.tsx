@@ -280,7 +280,7 @@ export default function Dashboard() {
             Base URL: <code className="text-amber-300">https://broomy.laserraptor.eu/api/v1</code>
           </p>
           <p className="text-sm text-gray-400">
-            Model: <code className="text-amber-300">qwen3.8-flash-next-ud-q4_k_xl</code> (also: qwen3.8-flash, qwen3.8-flash-next-iq3_s, sensei-qwen3.8-flash)
+            Models: <code className="text-amber-300">qwen3.8-flash-next-ud-q4_k_xl</code> (also: qwen3.8-flash, qwen3.8-flash-next-iq3_s, sensei-qwen3.8-flash) · <code className="text-amber-300">bonsai-2-27b</code>
           </p>
           {myUsage && (
             <div className="mt-4">
