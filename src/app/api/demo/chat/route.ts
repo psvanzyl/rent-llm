@@ -102,21 +102,29 @@ async function prime(model: string, messages: DemoMessage[]): Promise<Primed | n
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), FIRST_TOKEN_MS);
   try {
-    const res = await fetch(bk.url, {
-      method: "POST",
-      signal: ac.signal,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${bk.key}` },
-      body: JSON.stringify({
-        model: bk.backendId,
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-        max_tokens: DEMO.maxTokens,
-        temperature: 0.6,
-        stream: true,
-        // The engines serve reasoning models: without this the whole budget goes to
-        // hidden reasoning and the visible answer can be empty.
-        chat_template_kwargs: { enable_thinking: false },
+    const res = await Promise.race([
+      fetch(bk.url, {
+        method: "POST",
+        signal: ac.signal,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${bk.key}` },
+        body: JSON.stringify({
+          model: bk.backendId,
+          messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+          max_tokens: DEMO.maxTokens,
+          temperature: 0.6,
+          stream: true,
+          // The engines serve reasoning models: without this the whole budget goes to
+          // hidden reasoning and the visible answer can be empty.
+          chat_template_kwargs: { enable_thinking: false },
+        }),
       }),
-    });
+      new Promise<never>((_, reject) =>
+        setTimeout(() => {
+          ac.abort();
+          reject(new Error("connect timeout"));
+        }, FIRST_TOKEN_MS),
+      ),
+    ]);
     if (!res.ok || !res.body) {
       console.error("[broomy-demo] upstream", model, "status", res.status);
       return null;
@@ -195,6 +203,7 @@ const handlePost = async (req: Request) => {
 
   const ipHash = hashIp(clientIp(req));
   const slot = await takeSlot(ipHash);
+  console.log(`[broomy-demo] start ip=${ipHash} turns=${messages.length}`);
   if (!slot.ok) {
     return NextResponse.json(
       { error: slot.code, message: slot.message },
