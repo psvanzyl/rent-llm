@@ -81,6 +81,18 @@ function collect(buf: string, out: { text: string; prompt: number; completion: n
   return rest;
 }
 
+/** Read one chunk, or throw after `ms`. AbortSignal alone does not always
+ *  interrupt an in-flight body read in Node, so the timeout is raced here too. */
+function readWithTimeout<T>(reader: ReadableStreamDefaultReader<T>, ms: number): Promise<ReadableStreamReadResult<T>> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`read timeout after ${ms}ms`)), ms);
+  });
+  return Promise.race([reader.read(), timeout]).finally(() => clearTimeout(timer)) as Promise<
+    ReadableStreamReadResult<T>
+  >;
+}
+
 /**
  * Open an upstream stream and wait for the first visible text.
  * Returns null when nothing usable arrives before the deadline or the engine errors.
@@ -115,7 +127,10 @@ async function prime(model: string, messages: DemoMessage[]): Promise<Primed | n
     const acc = { text: "", prompt: 0, completion: 0 };
 
     for (;;) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readWithTimeout(reader, FIRST_TOKEN_MS).catch(() => {
+        reader.cancel().catch(() => {});
+        throw new Error("first token deadline");
+      });
       if (done) {
         clearTimeout(timer);
         return acc.text ? { reader: null, held: redact(acc.text), buf: "", model } : null;
@@ -225,7 +240,7 @@ const handlePost = async (req: Request) => {
 
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
-      const { done, value } = await reader.read().catch(() => ({ done: true, value: undefined }));
+      const { done, value } = await readWithTimeout(reader, 20000).catch(() => ({ done: true, value: undefined }));
       if (done) {
         if (held) controller.enqueue(encoder.encode(held));
         clearTimeout(deadline);
