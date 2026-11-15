@@ -100,6 +100,9 @@ const handlePost = async (req: Request) => {
         max_tokens: DEMO.maxTokens,
         temperature: 0.6,
         stream: true,
+        // The engine serves a reasoning model. Without this the token budget is
+        // spent on hidden reasoning and the visible answer can come back empty.
+        chat_template_kwargs: { enable_thinking: false },
       }),
       signal: AbortSignal.timeout(120_000),
     });
