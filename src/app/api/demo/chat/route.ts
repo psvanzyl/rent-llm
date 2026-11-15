@@ -1,27 +1,41 @@
 /**
  * Public demo endpoint — anonymous, rate limited, no API key.
  *
- * Threat model (see the GTM plan, section 7.5):
+ * Threat model (GTM plan, section 7.5):
  *   1. no tools, no browsing, no file access
  *   2. no secrets in the system prompt
- *   3. the request body is whitelisted to role/content messages
- *   4. upstream errors and bodies never reach the browser
+ *   3. the body is whitelisted to role/content messages
+ *   4. upstream bodies and error text never reach the browser
  *
- * Response is a plain UTF-8 text stream, not SSE: the widget appends chunks as
- * they arrive, and there is no JSON parser to break on a partial escape.
+ * Latency model: the primary engine is single-slot and shared with paying work, so a
+ * request can queue. We prime the answer first (first visible token) with a short
+ * deadline, fall back to the second engine once, and only then return. A visitor
+ * therefore gets either real text or an honest "busy" answer, never a blank spinner.
+ *
+ * The response body is a plain UTF-8 text stream: no SSE, no JSON parser in the widget.
  */
 import { NextResponse } from "next/server";
 import { backendModelFor } from "@/lib/models";
 import { clientIp } from "@/lib/auth";
 import { jsonRoute } from "@/lib/http";
 import { DEMO, demoEnabled, hashIp, originAllowed, takeSlot } from "@/lib/demo-limits";
-import { REDACT_TAIL, SYSTEM_PROMPT, redact, sanitizeMessages } from "@/lib/demo-sanitize";
+import { REDACT_TAIL, SYSTEM_PROMPT, redact, sanitizeMessages, type DemoMessage } from "@/lib/demo-sanitize";
 
 export const dynamic = "force-dynamic";
 
-const UPSTREAM =
-  (process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1").replace(/\/+$/, "") + "/chat/completions";
-const UPSTREAM_KEY = process.env.LLM_BACKEND_KEY || "local-no-auth";
+const PRIMARY_MODEL = process.env.DEMO_MODEL || DEMO.model;
+const FALLBACK_MODEL = process.env.DEMO_FALLBACK_MODEL || "bonsai";
+const FIRST_TOKEN_MS = 8000;
+
+function backendFor(model: string): { url: string; key: string; backendId: string } {
+  const url = model.startsWith("bonsai")
+    ? (process.env.LLM_BACKEND2_URL || "http://192.168.178.10:8087/v1")
+    : (process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1");
+  const key = model.startsWith("bonsai")
+    ? (process.env.LLM_BACKEND2_KEY || "")
+    : (process.env.LLM_BACKEND_KEY || "local-no-auth");
+  return { url: url.replace(/\/+$/, "") + "/chat/completions", key, backendId: backendModelFor(model) };
+}
 
 function cors(origin: string | null): Record<string, string> {
   return {
@@ -33,22 +47,106 @@ function cors(origin: string | null): Record<string, string> {
   };
 }
 
+type Primed = {
+  reader: ReadableStreamDefaultReader<Uint8Array> | null;
+  held: string;
+  buf: string;
+  model: string;
+};
+
+/** Pull deltas out of an SSE buffer. Never forwards unknown frames. */
+function collect(buf: string, out: { text: string; prompt: number; completion: number }): string {
+  const lines = buf.split("\n");
+  const rest = lines.pop() || "";
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === "[DONE]") continue;
+    try {
+      const obj = JSON.parse(payload) as {
+        choices?: { delta?: { content?: string } }[];
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
+      };
+      const piece = obj.choices?.[0]?.delta?.content;
+      if (typeof piece === "string") out.text += piece;
+      if (obj.usage) {
+        out.prompt = obj.usage.prompt_tokens ?? out.prompt;
+        out.completion = obj.usage.completion_tokens ?? out.completion;
+      }
+    } catch {
+      /* ignore partial or unknown frames */
+    }
+  }
+  return rest;
+}
+
+/**
+ * Open an upstream stream and wait for the first visible text.
+ * Returns null when nothing usable arrives before the deadline or the engine errors.
+ */
+async function prime(model: string, messages: DemoMessage[]): Promise<Primed | null> {
+  const bk = backendFor(model);
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), FIRST_TOKEN_MS);
+  try {
+    const res = await fetch(bk.url, {
+      method: "POST",
+      signal: ac.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${bk.key}` },
+      body: JSON.stringify({
+        model: bk.backendId,
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+        max_tokens: DEMO.maxTokens,
+        temperature: 0.6,
+        stream: true,
+        // The engines serve reasoning models: without this the whole budget goes to
+        // hidden reasoning and the visible answer can be empty.
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+    });
+    if (!res.ok || !res.body) {
+      console.error("[broomy-demo] upstream", model, "status", res.status);
+      return null;
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    const acc = { text: "", prompt: 0, completion: 0 };
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        clearTimeout(timer);
+        return acc.text ? { reader: null, held: redact(acc.text), buf: "", model } : null;
+      }
+      buf += decoder.decode(value, { stream: true });
+      buf = collect(buf, acc);
+      if (acc.text.trim().length > 0) {
+        clearTimeout(timer);
+        return { reader, held: redact(acc.text), buf, model };
+      }
+    }
+  } catch (e) {
+    console.error("[broomy-demo] prime failed", model, String(e).slice(0, 120));
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const handleOptions = async (req: Request) => {
   const origin = req.headers.get("origin");
-  if (!originAllowed(origin)) {
-    return new NextResponse(null, { status: 403 });
-  }
+  if (!originAllowed(origin)) return new NextResponse(null, { status: 403 });
   return new NextResponse(null, { status: 204, headers: cors(origin) });
 };
 
 const handlePost = async (req: Request) => {
   const origin = req.headers.get("origin");
-  // A missing Origin means a curl or a server-side call: allowed, but still
-  // limited by the per-IP counter. A wrong Origin is a third-party site.
+  // No Origin means curl or a server-side call: allowed, still counted per IP.
   if (origin && !originAllowed(origin)) {
     return NextResponse.json({ error: "origin_not_allowed" }, { status: 403 });
   }
-
   const headersOut = cors(origin);
 
   if (!demoEnabled()) {
@@ -89,86 +187,52 @@ const handlePost = async (req: Request) => {
     );
   }
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(UPSTREAM, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${UPSTREAM_KEY}` },
-      body: JSON.stringify({
-        model: backendModelFor(DEMO.model),
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-        max_tokens: DEMO.maxTokens,
-        temperature: 0.6,
-        stream: true,
-        // The engine serves a reasoning model. Without this the token budget is
-        // spent on hidden reasoning and the visible answer can come back empty.
-        chat_template_kwargs: { enable_thinking: false },
-      }),
-      signal: AbortSignal.timeout(120_000),
+  let primed = await prime(PRIMARY_MODEL, messages);
+  if (!primed && FALLBACK_MODEL !== PRIMARY_MODEL) {
+    primed = await prime(FALLBACK_MODEL, messages);
+  }
+  if (!primed) {
+    return NextResponse.json(
+      {
+        error: "engine_busy",
+        message: "Both engines are busy right now. Try again in a minute, or write to info@laserraptor.eu.",
+      },
+      { status: 503, headers: headersOut },
+    );
+  }
+
+  const t0 = Date.now();
+
+  // Short answer that already finished before we returned.
+  if (!primed.reader) {
+    console.log(`[broomy-demo] ok ip=${ipHash} model=${primed.model} ms=${Date.now() - t0} early_done=1`);
+    return new Response(primed.held, {
+      status: 200,
+      headers: { ...headersOut, "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-transform" },
     });
-  } catch (e) {
-    console.error("[broomy-demo] upstream fetch failed:", (e as Error)?.message);
-    return NextResponse.json(
-      { error: "engine_unavailable", message: "The engine is busy. Try again in a minute." },
-      { status: 503, headers: headersOut },
-    );
   }
 
-  if (!upstream.ok || !upstream.body) {
-    // Keep the upstream body in the server log only. It contains the engine URL.
-    console.error("[broomy-demo] upstream status", upstream.status, (await upstream.text().catch(() => "")).slice(0, 300));
-    return NextResponse.json(
-      { error: "engine_error", message: "The engine could not answer. Try again in a minute." },
-      { status: 503, headers: headersOut },
-    );
-  }
-
-  const reader = upstream.body.getReader();
+  const reader = primed.reader;
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
-  let buf = "";
-  let held = "";
-  let promptTokens = 0;
-  let completionTokens = 0;
+  let buf = primed.buf;
+  let held = primed.held;
 
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
-      const { done, value } = await reader.read();
+      const { done, value } = await reader.read().catch(() => ({ done: true, value: undefined }));
       if (done) {
-        const tailText = redact(held);
-        if (tailText) controller.enqueue(encoder.encode(tailText));
-        console.log(
-          `[broomy-demo] ok ip=${ipHash} prompt_tokens=${promptTokens} completion_tokens=${completionTokens}`,
-        );
+        if (held) controller.enqueue(encoder.encode(held));
+        console.log(`[broomy-demo] ok ip=${ipHash} model=${primed.model} ms=${Date.now() - t0}`);
         controller.close();
         return;
       }
-      buf += decoder.decode(value, { stream: true });
-      const lines = buf.split("\n");
-      buf = lines.pop() || "";
-      let delta = "";
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data:")) continue;
-        const payload = trimmed.slice(5).trim();
-        if (!payload || payload === "[DONE]") continue;
-        try {
-          const obj = JSON.parse(payload) as {
-            choices?: { delta?: { content?: string } }[];
-            usage?: { prompt_tokens?: number; completion_tokens?: number };
-          };
-          const piece = obj.choices?.[0]?.delta?.content;
-          if (typeof piece === "string") delta += piece;
-          if (obj.usage) {
-            promptTokens = obj.usage.prompt_tokens ?? promptTokens;
-            completionTokens = obj.usage.completion_tokens ?? completionTokens;
-          }
-        } catch {
-          // A partial or unknown frame: ignore it. Never forward it.
-        }
+      if (value) {
+        buf += decoder.decode(value, { stream: true });
+        const acc = { text: "", prompt: 0, completion: 0 };
+        buf = collect(buf, acc);
+        if (acc.text) held = redact(held + acc.text);
       }
-      if (!delta) return;
-      held = redact(held + delta);
       if (held.length > REDACT_TAIL) {
         const cut = held.length - REDACT_TAIL;
         controller.enqueue(encoder.encode(held.slice(0, cut)));
