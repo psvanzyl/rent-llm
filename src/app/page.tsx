@@ -159,7 +159,7 @@ export default function Home() {
               <span className="text-xs text-zinc-500 uppercase tracking-wider">Light use</span>
             </div>
             <div className="mt-6 flex items-baseline gap-1">
-              <span className="font-display text-5xl font-bold">€20</span>
+              <span className="font-display text-5xl font-bold">€39</span>
               <span className="text-zinc-500">/month</span>
             </div>
             <p className="mt-2 text-sm text-zinc-500">For occasional queries and small projects.</p>
@@ -188,7 +188,7 @@ export default function Home() {
               <span className="text-xs text-zinc-500 uppercase tracking-wider">Daily use</span>
             </div>
             <div className="mt-6 flex items-baseline gap-1">
-              <span className="font-display text-5xl font-bold">€50</span>
+              <span className="font-display text-5xl font-bold">€99</span>
               <span className="text-zinc-500">/month</span>
             </div>
             <p className="mt-2 text-sm text-zinc-500">For daily workloads and production apps.</p>
@@ -297,7 +297,7 @@ export default function Home() {
         <div className="space-y-3">
           {[
             { q: "How does billing work?", a: "Flat monthly fee. Pay once, get unlimited access for 30 days. No auto-renewal — you decide when to top up." },
-            { q: "Basic or Pro?", a: "Basic (€20) for light, occasional use with one concurrent request. Pro (€50) for daily workloads with three concurrent requests and priority queuing." },
+            { q: "Basic or Pro?", a: "Basic (€39) for light, occasional use with one concurrent request. Pro (€99) for daily workloads with three concurrent requests and priority access. On a busy hour you may wait a little longer." },
             { q: "What does unlimited tokens mean?", a: "No token cap and no overage charges. The only limit is how fast the model generates — throughput, not quota." },
             { q: "Are prices including VAT?", a: "No — all prices are net, plus statutory VAT. Intended for business use." },
             { q: "Can I use the OpenAI SDK?", a: "Yes. The API is fully OpenAI-compatible. Point any SDK at our base URL with your API key and it works." },
@@ -325,6 +325,35 @@ export default function Home() {
           </a>
         </div>
       </section>
+
+      {/* Legal */}
+      <footer className="border-t border-white/5 py-10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            Broomy is a product of LaserRaptor · Den Haag, NL · KvK 92580114 ·{" "}
+            <a href="mailto:info@laserraptor.eu" className="text-zinc-400 hover:text-amber-400">
+              info@laserraptor.eu
+            </a>
+          </p>
+          <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <a href="https://laserraptor.eu/legal/dpa" className="hover:text-amber-400">
+              DPA
+            </a>
+            <span aria-hidden="true" className="text-zinc-700">
+              /
+            </span>
+            <a href="https://laserraptor.eu/legal/sub-processors" className="hover:text-amber-400">
+              Sub-processors
+            </a>
+            <span aria-hidden="true" className="text-zinc-700">
+              /
+            </span>
+            <a href="https://laserraptor.eu/legal/privacy" className="hover:text-amber-400">
+              Privacy
+            </a>
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }

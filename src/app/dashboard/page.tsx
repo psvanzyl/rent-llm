@@ -192,8 +192,8 @@ export default function Dashboard() {
             className="mt-4 rounded-md border border-amber-500 px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/10"
           >
             {billing.tier === "pro"
-              ? "Extend pro — €50 for 31 more days"
-              : "Switch to Pro — €50"}
+              ? "Extend pro — €99 for 31 more days"
+              : "Switch to Pro — €99"}
           </button>
         )}
         {billing && !billing.active && (
@@ -213,10 +213,10 @@ export default function Dashboard() {
           <>
             <div className="mt-4 flex gap-2">
               <button onClick={() => subscribe("basic")} className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400">
-                Subscribe Basic (€20/mo)
+                Subscribe Basic (€39/mo)
               </button>
               <button onClick={() => subscribe("pro")} className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500">
-                Subscribe Pro (€50/mo)
+                Subscribe Pro (€99/mo)
               </button>
             </div>
             <p className="mt-2 text-xs text-gray-500">Payment via Mollie. You will be redirected to the hosted checkout.</p>
