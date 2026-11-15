@@ -35,7 +35,7 @@ export function redact(text: string): string {
 }
 
 /** How many characters we always hold back so a pattern cannot be split. */
-export const REDACT_TAIL = 80;
+export const REDACT_TAIL = 40;
 
 export const SYSTEM_PROMPT = [
   "You are the Broomy demo assistant on laserraptor.eu, run by LaserRaptor in Den Haag, the Netherlands.",

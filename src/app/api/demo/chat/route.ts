@@ -218,28 +218,44 @@ const handlePost = async (req: Request) => {
   let buf = primed.buf;
   let held = primed.held;
 
+  let idle = 0;
+  const deadline = setTimeout(() => {
+    reader.cancel().catch(() => {});
+  }, 45000);
+
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
       const { done, value } = await reader.read().catch(() => ({ done: true, value: undefined }));
       if (done) {
         if (held) controller.enqueue(encoder.encode(held));
+        clearTimeout(deadline);
         console.log(`[broomy-demo] ok ip=${ipHash} model=${primed.model} ms=${Date.now() - t0}`);
         controller.close();
         return;
       }
+      const before = held.length;
       if (value) {
         buf += decoder.decode(value, { stream: true });
         const acc = { text: "", prompt: 0, completion: 0 };
         buf = collect(buf, acc);
         if (acc.text) held = redact(held + acc.text);
       }
+      const grew = held.length !== before;
+      idle = grew ? 0 : idle + 1;
+
       if (held.length > REDACT_TAIL) {
         const cut = held.length - REDACT_TAIL;
         controller.enqueue(encoder.encode(held.slice(0, cut)));
         held = held.slice(cut);
+      } else if (!grew && idle >= 2 && held) {
+        // Engine sends keep-alive comments but no more text: the answer is complete
+        // or truncated. Flush the tail so a short answer is never held back.
+        controller.enqueue(encoder.encode(held));
+        held = "";
       }
     },
     cancel() {
+      clearTimeout(deadline);
       reader.cancel().catch(() => {});
     },
   });
