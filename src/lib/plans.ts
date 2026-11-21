@@ -14,7 +14,7 @@ export const PLANS: Record<Plan["id"], Plan> = {
   basic: {
     id: "basic",
     name: "Basic",
-    priceCents: 3900,
+    priceCents: 2000,
     concurrent: 1,
     accessDays: 31,
     description: "1 concurrent request, unlimited tokens.",
@@ -22,10 +22,10 @@ export const PLANS: Record<Plan["id"], Plan> = {
   pro: {
     id: "pro",
     name: "Pro",
-    priceCents: 9900,
+    priceCents: 3500,
     concurrent: 3,
     accessDays: 31,
-    description: "3 concurrent requests, priority queue. Busy hours can add a wait.",
+    description: "Priority queue, up to 3 keys. Busy hours can add a wait.",
   },
 };
 
