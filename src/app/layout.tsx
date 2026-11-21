@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     default: "Broomy — rent a Qwen 3.8 model by the month",
     template: "%s · Broomy",
   },
-  description: "Rent EU-hosted model access through an OpenAI-compatible API. €20 or €35 per month, flat fee, Dutch soil.",
+  description: "Rent EU-hosted model access through an OpenAI-compatible API. €20 or €40 per month, flat fee, Dutch soil.",
   metadataBase: new URL("https://broomy.laserraptor.eu"),
   icons: { icon: [{ url: "/favicon.ico" }, { url: "/broom-icon.png", type: "image/png" }], apple: "/apple-touch-icon.png" },
 };

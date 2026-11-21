@@ -22,7 +22,7 @@ export const PLANS: Record<Plan["id"], Plan> = {
   pro: {
     id: "pro",
     name: "Pro",
-    priceCents: 3500,
+    priceCents: 4000,
     concurrent: 3,
     accessDays: 31,
     description: "Priority queue, up to 3 keys. Busy hours can add a wait.",
