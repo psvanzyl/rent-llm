@@ -22,7 +22,7 @@ export const DEMO = {
   /** hard cap for every visitor together, per day */
   globalPerDay: 400,
   /** model shown and used in the demo; the client cannot change it */
-  model: "sensei",
+  model: "bonsai",
 } as const;
 
 export function demoEnabled(): boolean {

@@ -24,7 +24,7 @@ import { REDACT_TAIL, SYSTEM_PROMPT, redact, sanitizeMessages, type DemoMessage 
 export const dynamic = "force-dynamic";
 
 const PRIMARY_MODEL = process.env.DEMO_MODEL || DEMO.model;
-const FALLBACK_MODEL = process.env.DEMO_FALLBACK_MODEL || "bonsai";
+const FALLBACK_MODEL = process.env.DEMO_FALLBACK_MODEL || "sensei";
 const FIRST_TOKEN_MS = 8000;
 
 function backendFor(model: string): { url: string; key: string; backendId: string } {
@@ -133,9 +133,18 @@ async function prime(model: string, messages: DemoMessage[]): Promise<Primed | n
     const decoder = new TextDecoder();
     let buf = "";
     const acc = { text: "", prompt: 0, completion: 0 };
+    const tFirst = Date.now();
 
     for (;;) {
-      const { done, value } = await readWithTimeout(reader, FIRST_TOKEN_MS).catch(() => {
+      // Wall-clock deadline, not a per-read timeout: a busy single-slot engine
+      // sends keep-alive frames every few seconds and this must still give up
+      // once the first visible token is not coming.
+      const remaining = FIRST_TOKEN_MS - (Date.now() - tFirst);
+      if (remaining <= 0) {
+        reader.cancel().catch(() => {});
+        return null;
+      }
+      const { done, value } = await readWithTimeout(reader, remaining).catch(() => {
         reader.cancel().catch(() => {});
         throw new Error("first token deadline");
       });
