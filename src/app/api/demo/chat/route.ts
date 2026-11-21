@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 const PRIMARY_MODEL = process.env.DEMO_MODEL || DEMO.model;
 const FALLBACK_MODEL = process.env.DEMO_FALLBACK_MODEL || "sensei";
-const FIRST_TOKEN_MS = 8000;
+const FIRST_TOKEN_MS = 20000;
 
 function backendFor(model: string): { url: string; key: string; backendId: string } {
   const url = model.startsWith("bonsai")
