@@ -14,13 +14,7 @@ interface BackendConfig {
   key: string;
 }
 
-function backendForModel(model: string): BackendConfig {
-  if (model.startsWith("bonsai")) {
-    return {
-      url: process.env.LLM_BACKEND2_URL || "http://192.168.178.10:8087/v1",
-      key: process.env.LLM_BACKEND2_KEY || "",
-    };
-  }
+function backendForModel(_model: string): BackendConfig {
   return {
     url: process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1",
     key: process.env.LLM_BACKEND_KEY || "local-no-auth",
@@ -56,12 +50,12 @@ const handler_POST = async (req: Request) => {
   const stream = (body as { stream?: boolean })?.stream === true;
   const model = resolveModelId((body as { model?: string })?.model || "sensei");
 
-  // Image generation: route to local SD 1.5 service, return as chat completion
+  // Image generation: route to genbox RealVisXL service, return as chat completion
   if (model === "image") {
     const messages = (body as { messages?: { role: string; content: string }[] })?.messages || [];
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const prompt = lastUser?.content || "";
-    const imageUrl = process.env.IMAGE_BACKEND_URL || "http://192.168.178.10:8088";
+    const imageUrl = process.env.IMAGE_BACKEND_URL || "http://192.168.178.170:8088";
     let upstream: Response;
     try {
       upstream = await fetch(imageUrl + "/generate", {

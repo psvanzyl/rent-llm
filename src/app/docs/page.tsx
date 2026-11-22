@@ -16,15 +16,15 @@ export default function Docs() {
 
       <h2 className="mt-8 text-lg font-semibold">Models</h2>
       <p className="mt-2 text-sm text-gray-400">
-        Two models. Pass either id in the <code className="text-amber-300">model</code> field.
+        One model plus image generation. Pass an id in the <code className="text-amber-300">model</code> field.
       </p>
       <pre className="mt-3 rounded-lg border border-gray-800 bg-black p-4 text-sm overflow-x-auto">
 {`model="sensei"   sensei (qwen3.8)  262k context  $0.10 in / $0.20 out per 1M tokens
-model="bonsai"   bonsai (qwen3.6)   65k context  $0.05 in / $0.10 out per 1M tokens`}
+model="image"    image (RealVisXL V5)  PNG 512-1024px  included in every plan`}
       </pre>
       <p className="mt-2 text-sm text-gray-500">
-        Legacy model ids (qwen3.8-flash-next-ud-q4_k_xl, sensei-qwen3.8-flash, bonsai-2-27b and
-        other engine aliases) are still accepted and map to the two models above.
+        Legacy model ids (qwen3.8-flash-next-ud-q4_k_xl, sensei-qwen3.8-flash, bonsai-2-27b,
+        sd-1.5 and other engine aliases) are still accepted and map to the models above.
         Rates are a reference for comparison with per-token APIs; Broomy plans are flat monthly.
       </p>
 

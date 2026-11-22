@@ -10,13 +10,7 @@ const MAX_TURNS = 20;
 const MAX_CHARS = 4000;
 const MAX_TOKENS = 512;
 
-function backendFor(model: string): { url: string; key: string } {
-  if (model.startsWith("bonsai")) {
-    return {
-      url: process.env.LLM_BACKEND2_URL || "http://192.168.178.10:8087/v1",
-      key: process.env.LLM_BACKEND2_KEY || "",
-    };
-  }
+function backendFor(_model: string): { url: string; key: string } {
   return {
     url: process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1",
     key: process.env.LLM_BACKEND_KEY || "local-no-auth",

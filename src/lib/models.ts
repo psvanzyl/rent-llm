@@ -1,5 +1,5 @@
 // Single source of truth for the Broomy model catalogue.
-// Public API ids are 'sensei' and 'bonsai'; engine ids stay internal.
+// Public API ids are 'sensei' and 'image'; engine ids stay internal.
 
 export interface ModelEntry {
   id: string;           // public API id
@@ -19,16 +19,9 @@ export const MODELS: ModelEntry[] = [
     pricePerMTok: { input: 0.1, output: 0.2 },
   },
   {
-    id: 'bonsai',
-    display: 'bonsai (qwen3.6)',
-    backendId: 'bonsai-2-27b',
-    contextLength: 65536,
-    pricePerMTok: { input: 0.05, output: 0.1 },
-  },
-  {
     id: 'image',
-    display: 'image (sd-1.5)',
-    backendId: 'sd-1.5',
+    display: 'image (realvisxl v5)',
+    backendId: 'realvisxl-v5',
     contextLength: 0,
     pricePerMTok: { input: 0, output: 0 },
     isImage: true,
@@ -44,8 +37,6 @@ const ALIASES: Record<string, string> = {
   'sensei-qwen3.8': 'sensei',
   'qwen3.8': 'sensei',
   'qwen3.8-flash-next': 'sensei',
-  'bonsai-2-27b': 'bonsai',
-  'bonsai-2': 'bonsai',
   'sd-1.5': 'image',
   'sd1.5': 'image',
   'dall-e': 'image',
@@ -56,7 +47,7 @@ const ALIASES: Record<string, string> = {
 export function resolveModelId(model: string): string {
   const m = (model || '').trim().toLowerCase();
   if (ALIASES[m]) return ALIASES[m];
-  if (m.startsWith('bonsai')) return 'bonsai';
+  if (m.startsWith('bonsai')) return 'sensei'; // retired model: route to the main brain
   if (m.startsWith('image') || m.startsWith('sd') || m.startsWith('dall')) return 'image';
   return 'sensei'; // unknown ids default to the main model
 }
@@ -72,7 +63,6 @@ export function displayModel(model: string | null | undefined): string {
   if (!model) return '—';
   const m = model.trim().toLowerCase();
   if (ALIASES[m]) return MODELS.find((x) => x.id === ALIASES[m])!.display;
-  if (m.startsWith('bonsai')) return 'bonsai (qwen3.6)';
   const hit = MODELS.find((x) => x.id === m);
   return hit ? hit.display : model;
 }

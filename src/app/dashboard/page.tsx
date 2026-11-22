@@ -281,7 +281,7 @@ export default function Dashboard() {
             Base URL: <code className="text-amber-300">https://broomy.laserraptor.eu/api/v1</code>
           </p>
           <p className="text-sm text-gray-400">
-            Models: <code className="text-amber-300">sensei</code> (qwen3.8, 262k ctx · $0.10 in / $0.20 out per 1M) · <code className="text-amber-300">bonsai</code> (qwen3.6, 65k ctx · $0.05 in / $0.10 out per 1M)
+            Models: <code className="text-amber-300">sensei</code> (qwen3.8, 262k ctx · $0.10 in / $0.20 out per 1M) · <code className="text-amber-300">image</code> (RealVisXL V5, PNG, included)
           </p>
           {myUsage && (
             <div className="mt-4">

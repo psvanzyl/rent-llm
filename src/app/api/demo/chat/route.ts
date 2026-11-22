@@ -7,10 +7,10 @@
  *   3. the body is whitelisted to role/content messages
  *   4. upstream bodies and error text never reach the browser
  *
- * Latency model: the primary engine is single-slot and shared with paying work, so a
+ * Latency model: the engine is single-slot and shared with paying work, so a
  * request can queue. We prime the answer first (first visible token) with a short
- * deadline, fall back to the second engine once, and only then return. A visitor
- * therefore gets either real text or an honest "busy" answer, never a blank spinner.
+ * deadline, retry once, and only then return. A visitor therefore gets either real
+ * text or an honest "busy" answer, never a blank spinner.
  *
  * The response body is a plain UTF-8 text stream: no SSE, no JSON parser in the widget.
  */
@@ -28,12 +28,8 @@ const FALLBACK_MODEL = process.env.DEMO_FALLBACK_MODEL || "sensei";
 const FIRST_TOKEN_MS = 20000;
 
 function backendFor(model: string): { url: string; key: string; backendId: string } {
-  const url = model.startsWith("bonsai")
-    ? (process.env.LLM_BACKEND2_URL || "http://192.168.178.10:8087/v1")
-    : (process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1");
-  const key = model.startsWith("bonsai")
-    ? (process.env.LLM_BACKEND2_KEY || "")
-    : (process.env.LLM_BACKEND_KEY || "local-no-auth");
+  const url = process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1";
+  const key = process.env.LLM_BACKEND_KEY || "local-no-auth";
   return { url: url.replace(/\/+$/, "") + "/chat/completions", key, backendId: backendModelFor(model) };
 }
 

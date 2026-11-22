@@ -34,7 +34,7 @@ const handler_POST = async (req: Request) => {
     );
   }
 
-  const backendUrl = process.env.IMAGE_BACKEND_URL || "http://192.168.178.10:8088";
+  const backendUrl = process.env.IMAGE_BACKEND_URL || "http://192.168.178.170:8088";
   let upstream: Response;
   try {
     upstream = await fetch(backendUrl + "/generate", {
