@@ -44,7 +44,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })), model }),
+        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })), model: "sensei" }),
       });
       if (!res.ok || !res.body) {
         const t = await res.text().catch(() => "");
@@ -56,19 +56,12 @@ export default function ChatPage() {
         setStreaming(false);
         return;
       }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let acc = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setMessages((prev) => {
-          const copy = [...prev];
-          copy[copy.length - 1] = { role: "assistant", content: acc };
-          return copy;
-        });
-      }
+      const text = await res.text();
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: "assistant", content: text };
+        return copy;
+      });
     } catch (e) {
       setMessages((prev) => {
         const copy = [...prev];
@@ -122,16 +115,7 @@ export default function ChatPage() {
           <h1 className="text-2xl font-bold">Chat</h1>
           <p className="text-sm text-gray-400">{user.email} · free account</p>
         </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value as "sensei" | "bonsai")}
-            className="rounded-md border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-gray-100"
-          >
-            <option value="sensei">sensei (qwen3.8)</option>
-            <option value="bonsai">bonsai (qwen3.6)</option>
-          </select>
-        </div>
+        <div className="text-sm text-gray-400">sensei (qwen3.8)</div>
       </div>
 
       <div className="flex-1 overflow-y-auto rounded-lg border border-gray-800 bg-gray-900/30 p-4 space-y-4">

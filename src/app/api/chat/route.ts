@@ -2,14 +2,13 @@ import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { jsonRoute } from "@/lib/http";
 import { resolveModelId, backendModelFor } from "@/lib/models";
-import { sanitizeMessages, redact, REDACT_TAIL, type DemoMessage } from "@/lib/demo-sanitize";
-import { clientIp } from "@/lib/auth";
+import { sanitizeMessages, redact } from "@/lib/demo-sanitize";
 
 export const dynamic = "force-dynamic";
 
 const MAX_TURNS = 20;
 const MAX_CHARS = 4000;
-const MAX_TOKENS = 1024;
+const MAX_TOKENS = 512;
 
 function backendFor(model: string): { url: string; key: string } {
   if (model.startsWith("bonsai")) {
@@ -66,7 +65,7 @@ const handler_POST = async (req: Request) => {
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
         max_tokens: MAX_TOKENS,
         temperature: 0.7,
-        stream: true,
+        stream: false,
         chat_template_kwargs: { enable_thinking: false },
       }),
     });
@@ -74,65 +73,16 @@ const handler_POST = async (req: Request) => {
     return NextResponse.json({ error: "backend_unavailable" }, { status: 502 });
   }
 
-  if (!upstream.ok || !upstream.body) {
+  if (!upstream.ok) {
     const text = await upstream.text().catch(() => "");
     return new NextResponse(text, { status: upstream.status, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
 
-  const reader = upstream.body.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let buf = "";
-  let held = "";
-
-  const stream = new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      const { done, value } = await reader.read();
-      if (done) {
-        if (held) controller.enqueue(encoder.encode(held));
-        controller.close();
-        return;
-      }
-      buf += decoder.decode(value, { stream: true });
-      const lines = buf.split("\n");
-      buf = lines.pop() || "";
-      let grew = false;
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data:")) continue;
-        const payload = trimmed.slice(5).trim();
-        if (!payload || payload === "[DONE]") continue;
-        try {
-          const obj = JSON.parse(payload) as { choices?: { delta?: { content?: string } }[] };
-          const piece = obj.choices?.[0]?.delta?.content;
-          if (typeof piece === "string") {
-            held = redact(held + piece);
-            grew = true;
-          }
-        } catch {
-          /* ignore */
-        }
-      }
-      if (held.length > REDACT_TAIL) {
-        const cut = held.length - REDACT_TAIL;
-        controller.enqueue(encoder.encode(held.slice(0, cut)));
-        held = held.slice(cut);
-      } else if (!grew && held) {
-        // flush small tail when no more text arrives this chunk cycle handled by next
-      }
-    },
-    cancel() {
-      reader.cancel().catch(() => {});
-    },
-  });
-
-  return new Response(stream, {
+  const data = (await upstream.json()) as { choices?: { message?: { content?: string } }[] };
+  const content = data?.choices?.[0]?.message?.content || "";
+  return new NextResponse(redact(content), {
     status: 200,
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store, no-transform",
-      "X-Accel-Buffering": "no",
-    },
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
   });
 };
 
