@@ -55,6 +55,46 @@ const handler_POST = async (req: Request) => {
 
   const stream = (body as { stream?: boolean })?.stream === true;
   const model = resolveModelId((body as { model?: string })?.model || "sensei");
+
+  // Image generation: route to local SD 1.5 service, return as chat completion
+  if (model === "image") {
+    const messages = (body as { messages?: { role: string; content: string }[] })?.messages || [];
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    const prompt = lastUser?.content || "";
+    const imageUrl = process.env.IMAGE_BACKEND_URL || "http://192.168.178.10:8088";
+    let upstream: Response;
+    try {
+      upstream = await fetch(imageUrl + "/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, width: 512, height: 512, steps: 20 }),
+      });
+    } catch (e) {
+      inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
+      return NextResponse.json({ error: "backend_unavailable" }, { status: 502 });
+    }
+    if (!upstream.ok) {
+      inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
+      const text = await upstream.text().catch(() => "");
+      return new NextResponse(text, { status: upstream.status, headers: { "Content-Type": "application/json" } });
+    }
+    const data = (await upstream.json()) as { image: string };
+    inflight.set(rec.userId, Math.max(0, (inflight.get(rec.userId) || 1) - 1));
+    const completionId = "chatcmpl-img-" + Date.now();
+    return NextResponse.json({
+      id: completionId,
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: "image",
+      choices: [{
+        index: 0,
+        message: { role: "assistant", content: "![generated image](data:image/png;base64," + data.image + ")" },
+        finish_reason: "stop",
+      }],
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+    });
+  }
+
   const bk = backendForModel(model);
 
   let upstream: Response;

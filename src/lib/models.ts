@@ -7,6 +7,7 @@ export interface ModelEntry {
   backendId: string;    // id the upstream engine expects
   contextLength: number;
   pricePerMTok: { input: number; output: number }; // USD per 1M tokens
+  isImage?: boolean;
 }
 
 export const MODELS: ModelEntry[] = [
@@ -24,6 +25,14 @@ export const MODELS: ModelEntry[] = [
     contextLength: 65536,
     pricePerMTok: { input: 0.05, output: 0.1 },
   },
+  {
+    id: 'image',
+    display: 'image (sd-1.5)',
+    backendId: 'sd-1.5',
+    contextLength: 0,
+    pricePerMTok: { input: 0, output: 0 },
+    isImage: true,
+  },
 ];
 
 // Legacy/alias ids still accepted on chat completions.
@@ -37,12 +46,18 @@ const ALIASES: Record<string, string> = {
   'qwen3.8-flash-next': 'sensei',
   'bonsai-2-27b': 'bonsai',
   'bonsai-2': 'bonsai',
+  'sd-1.5': 'image',
+  'sd1.5': 'image',
+  'dall-e': 'image',
+  'dalle': 'image',
+  'image': 'image',
 };
 
 export function resolveModelId(model: string): string {
   const m = (model || '').trim().toLowerCase();
   if (ALIASES[m]) return ALIASES[m];
   if (m.startsWith('bonsai')) return 'bonsai';
+  if (m.startsWith('image') || m.startsWith('sd') || m.startsWith('dall')) return 'image';
   return 'sensei'; // unknown ids default to the main model
 }
 
