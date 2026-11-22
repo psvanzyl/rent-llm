@@ -20,6 +20,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-screen flex flex-col antialiased">
+          <script dangerouslySetInnerHTML={{ __html: `
+            (function() {
+              var hosts = ["broomy.laserraptor.eu"];
+              if (hosts.indexOf(location.hostname) === -1) return;
+              var w = "d3a4e9b6-cd34-49e5-9e95-aed18d1fd6c2";
+              var s = document.createElement("script");
+              s.src = "https://umami.laserraptorai.duckdns.org/script.js";
+              s.defer = true;
+              s.setAttribute("data-website-id", w);
+              document.head.appendChild(s);
+            })();
+          ` }} />
         <header className="sticky top-0 z-40 border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl">
           <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
             <a href="/" className="flex items-center gap-3 group">
