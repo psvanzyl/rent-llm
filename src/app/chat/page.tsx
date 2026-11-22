@@ -2,239 +2,224 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-  image?: string; // base64 PNG from image generation
-}
-
-const GUEST_KEY = "broomy_demo_messages";
-
-// Say "draw a fox" / "generate an image of ..." in the chat and it goes to the
-// image model. Keyword-based on purpose: predictable, no extra LLM call.
-function imageIntent(text: string): string | null {
-  const t = text.trim();
-  let m;
-  if ((m = t.match(/^(?:draw|sketch|illustrate)\s+(?:me\s+)?(?:a|an|the)?\s*(?!(?:conclusions?)\b)(.+)/i))) return m[1];
-  if ((m = t.match(/^(?:generate|create|make|render)\s+(?:an?\s+)?(?:image|picture|photo|drawing|painting)\s+(?:of|showing|with|for)?\s+(.+)/i))) return m[1];
-  if ((m = t.match(/^(?:picture|image)\s+of\s+(.+)/i))) return m[1];
-  if ((m = t.match(/^imagine\s+(.+)/i))) return m[1];
-  if ((m = t.match(/^teken\s+(?:me\s+)?(?:een\s+|de\s+)?(.+)/i))) return m[1];
-  if ((m = t.match(/^(?:genereer|maak)\s+(?:me\s+)?(?:een\s+)?(?:afbeelding|plaatje|foto|image)\s+(?:van\s+|met\s+)?(.+)/i))) return m[1];
-  if ((m = t.match(/^mal\s+ein\s+bild\s+(?:von\s+)?(.+)/i))) return m[1];
-  return null;
-}
+type Msg = { role: "user" | "assistant"; content: string; image?: string };
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [user, setUser] = useState<{ email: string; role: string } | null>(null);
-  const [imgQuota, setImgQuota] = useState<{ used: number; remaining: number; cap: number } | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const [user, setUser] = useState<{ email: string } | null>(null);
+  const [messages, setMessages] = useState<Msg[]>([]);
+  const [input, setInput] = useState("");
+  const [model, setModel] = useState<"sensei" | "bonsai">("sensei");
+  const [streaming, setStreaming] = useState(false);
+  const [imgPrompt, setImgPrompt] = useState("");
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgProgress, setImgProgress] = useState(0);
+  const [imgElapsed, setImgElapsed] = useState(0);
+  const [imgQuota, setImgQuota] = useState<{ used: number; remaining: number; cap: number } | null>(null);
+  const [imgErr, setImgErr] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Demo visitors run on localStorage (guest mode). Signed-in users get the real /api/chat.
-    const guest = typeof localStorage !== "undefined" && localStorage.getItem(GUEST_KEY) === "1";
-    if (guest) {
-      setUser({ email: "demo@guest", role: "demo" });
-      try {
-        const raw = localStorage.getItem(GUEST_KEY + ":msgs");
-        if (raw) setMessages(JSON.parse(raw));
-      } catch {}
-      return;
-    }
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((u) => {
-        setUser(u);
-        fetch("/api/images/generate", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then(setImgQuota);
-      })
-      .catch(() => router.replace("/login"));
+    (async () => {
+      const me = await fetch("/api/auth/me");
+      if (!me.ok) { router.push("/login"); return; }
+      const d = await me.json();
+      setUser(d.user);
+      const q = await fetch("/api/images/generate");
+      if (q.ok) setImgQuota(await q.json());
+    })();
   }, [router]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    if (user?.role === "demo") {
-      try { localStorage.setItem(GUEST_KEY + ":msgs", JSON.stringify(messages.slice(-20))); } catch {}
-    }
-  }, [messages, user]);
+  }, [messages]);
 
   async function send() {
     const text = input.trim();
-    if (!text || busy || !user) return;
+    if (!text || streaming) return;
     setInput("");
-    setMessages((m) => [...m, { role: "user", content: text }]);
-    const img = user.role !== "demo" ? imageIntent(text) : null;
-    if (img) return sendImage(text, img);
-    setBusy(true);
-    setMessages((m) => [...m, { role: "assistant", content: "" }]);
+    const next: Msg[] = [...messages, { role: "user", content: text }];
+    setMessages([...next, { role: "assistant", content: "" }]);
+    setStreaming(true);
     try {
-      if (user.role === "demo") {
-        // Guest: demo endpoint is anonymous and rate-limited; no account, no keys.
-        const res = await fetch("/api/demo/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: [{ role: "user", content: text }] }),
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })), model: "sensei" }),
+      });
+      if (!res.ok || !res.body) {
+        const t = await res.text().catch(() => "");
+        setMessages((prev) => {
+          const copy = [...prev];
+          copy[copy.length - 1] = { role: "assistant", content: t || "Error: request failed." };
+          return copy;
         });
-        if (res.status === 429) {
-          const j = await res.json().catch(() => ({}));
-          setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: "Demo rate limit reached: " + (j.error || "try again later") + ". Create a free account for the full chat." }]);
-          return;
-        }
-        if (!res.ok || !res.body) {
-          setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: "The demo is busy right now — try again in a minute." }]);
-          return;
-        }
-        const reader = res.body.getReader();
-        const dec = new TextDecoder();
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const piece = dec.decode(value, { stream: true });
-          setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: m[m.length - 1].content + piece }]);
-        }
-      } else {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: [{ role: "user", content: text }], model: "sensei" }),
-        });
-        if (!res.ok) {
-          const j = await res.json().catch(() => ({}));
-          setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: "Error: " + (j.error || res.status) }]);
-          return;
-        }
-        const text0 = await res.text();
-        setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: text0 }]);
+        setStreaming(false);
+        return;
       }
-    } catch {
-      setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: "Network error — is the engine up?" }]);
+      const text = await res.text();
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: "assistant", content: text };
+        return copy;
+      });
+    } catch (e) {
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: "assistant", content: "Network error." };
+        return copy;
+      });
     } finally {
-      setBusy(false);
+      setStreaming(false);
     }
   }
 
-  // Image ask from the chat box: uses the same free daily quota as the old image box.
-  async function sendImage(shown: string, prompt: string) {
-    if (imgQuota && imgQuota.remaining <= 0) {
-      setMessages((m) => [...m, { role: "assistant", content: "You have used all " + imgQuota.cap + " free images for today. They reset at midnight." }]);
-      return;
-    }
-    setBusy(true);
-    setMessages((m) => [...m, { role: "assistant", content: "Generating an image (~1–2 min)…" }]);
+  async function generateImage() {
+    const prompt = imgPrompt.trim();
+    if (!prompt || imgBusy) return;
+    setImgBusy(true);
+    setImgErr(null);
+    setImgProgress(0);
+    setImgElapsed(0);
+    const t0 = Date.now();
+    const timer = setInterval(() => {
+      const el = (Date.now() - t0) / 1000;
+      setImgElapsed(Math.floor(el));
+      // ease toward 90% over ~45s; never reach 100% until done
+      setImgProgress(Math.min(90, Math.round((1 - Math.exp(-el / 15)) * 90)));
+    }, 500);
     try {
       const res = await fetch("/api/images/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 429) {
-        setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: "You have used all " + (data.cap ?? 3) + " free images for today. They reset at midnight." }]);
-      } else if (!res.ok) {
-        setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: "Image generation failed: " + (data.error || res.status) }]);
-      } else {
-        setImgQuota({ used: data.used, remaining: data.remaining, cap: data.cap });
-        setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: "Here you go.", image: data.image }]);
+      const data = await res.json();
+      if (!res.ok) {
+        setImgErr(data?.message || data?.error || "Image generation failed.");
+        return;
       }
+      const b64 = data?.data?.[0]?.b64_json;
+      if (b64) {
+        setMessages((prev) => [...prev, { role: "assistant", content: `Generated image for: "${prompt}"`, image: b64 }]);
+      }
+      if (data.remaining !== undefined) {
+        setImgQuota((q) => q ? { ...q, used: q.cap - data.remaining, remaining: data.remaining } : { used: 3 - data.remaining, remaining: data.remaining, cap: 3 });
+      }
+      setImgPrompt("");
     } catch {
-      setMessages((m) => [...m.slice(0, -1), { role: "assistant", content: "Image generation failed — network error." }]);
+      setImgErr("Network error.");
     } finally {
-      setBusy(false);
+      clearInterval(timer);
+      setImgProgress(100);
+      setImgBusy(false);
     }
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-zinc-500">
-        <p>Loading…</p>
-      </div>
-    );
+    return <div className="mx-auto max-w-4xl px-4 py-20 text-gray-400">Loading…</div>;
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-white/5 bg-ink-2/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="font-display font-bold text-lg">
-            broomy<span className="text-amber-400">.</span>
-          </Link>
-          <div className="flex items-center gap-4 text-sm">
-            {imgQuota && (
-              <span className="text-zinc-500">{imgQuota.remaining}/{imgQuota.cap} free images today</span>
-            )}
-            {user.role === "demo" ? (
-              <span className="text-amber-300">demo · no account</span>
-            ) : (
-              <span className="text-zinc-400">{user.email}</span>
-            )}
-            <Link href="/dashboard" className="text-zinc-400 hover:text-amber-300">Dashboard</Link>
-          </div>
+    <div className="mx-auto max-w-4xl px-4 py-6 flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Chat</h1>
+          <p className="text-sm text-gray-400">{user.email} · free account</p>
         </div>
-      </header>
+        <div className="text-sm text-gray-400">sensei (qwen3.8)</div>
+      </div>
 
-      <main className="flex-1 w-full max-w-3xl mx-auto px-6 py-6 flex flex-col gap-3">
-        <div className="text-xs text-zinc-500 mb-2">
-          Free account · sensei (qwen3.8) · say “draw a fox” to generate an image
-        </div>
+      <div className="flex-1 overflow-y-auto rounded-lg border border-gray-800 bg-gray-900/30 p-4 space-y-4">
         {messages.length === 0 && (
-          <div className="text-zinc-500 text-sm mt-8 text-center">
-            <p>Ask me anything. I remember you between sessions.</p>
-            <p className="mt-1">Try: “draw a red fox” · “explain this code” · “what can you do?”</p>
-          </div>
+          <p className="text-center text-gray-500 mt-10">Start a conversation. Ask anything.</p>
         )}
         {messages.map((m, i) => (
-          <div
-            key={i}
-            className={
-              m.role === "user"
-                ? "self-end max-w-[85%] rounded-lg bg-amber-500/10 border border-amber-400/20 px-4 py-2 text-sm text-zinc-100 whitespace-pre-wrap"
-                : "self-start max-w-[85%] rounded-lg bg-white/5 border border-white/5 px-4 py-2 text-sm text-zinc-200 whitespace-pre-wrap"
-            }
-          >
-            {m.image && (
-              <img
-                src={"data:image/png;base64," + m.image}
-                alt="generated image"
-                className="rounded-md mb-2 max-w-full"
-                style={{ maxHeight: 512 }}
-              />
-            )}
-            {m.content}
+          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div
+              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
+                m.role === "user"
+                  ? "bg-amber-500 text-black"
+                  : "bg-gray-800 text-gray-100 border border-gray-700"
+              }`}
+            >
+              {m.content}
+              {m.image && (
+                <img
+                  src={`data:image/png;base64,${m.image}`}
+                  alt="generated"
+                  className="mt-2 rounded-lg max-w-full"
+                />
+              )}
+              {m.role === "assistant" && streaming && i === messages.length - 1 && (
+                <span className="inline-block w-2 h-4 bg-amber-400 ml-1 animate-pulse" />
+              )}
+            </div>
           </div>
         ))}
-        {busy && <div className="self-start text-zinc-500 text-sm px-1">…</div>}
         <div ref={bottomRef} />
-      </main>
+      </div>
 
-      <footer className="border-t border-white/5 bg-ink-2/80 sticky bottom-0">
-        <div className="max-w-3xl mx-auto px-6 py-3 flex gap-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-            placeholder="Message… (or ask: draw a red fox)"
-            rows={2}
-            className="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400/40 resize-none"
+      <div className="mt-4 flex gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+          placeholder="Message…"
+          disabled={streaming}
+          className="flex-1 rounded-md border border-gray-700 bg-gray-900 px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-amber-500 focus:outline-none disabled:opacity-50"
+        />
+        <button
+          onClick={send}
+          disabled={streaming || !input.trim()}
+          className="rounded-md bg-amber-500 px-5 py-2.5 text-sm font-medium text-black hover:bg-amber-400 disabled:opacity-50"
+        >
+          Send
+        </button>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-gray-800 bg-gray-900/50 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs uppercase text-gray-500">Image generation</span>
+          {imgQuota && (
+            <span className="text-xs text-gray-400">
+              {imgQuota.remaining}/{imgQuota.cap} free today
+            </span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={imgPrompt}
+            onChange={(e) => setImgPrompt(e.target.value)}
+            placeholder="Describe an image to generate…"
+            disabled={imgBusy}
+            className="flex-1 rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-amber-500 focus:outline-none disabled:opacity-50"
           />
           <button
-            onClick={send}
-            disabled={busy || !input.trim()}
-            className="px-4 rounded-lg bg-amber-500 text-black text-sm font-semibold disabled:opacity-40 self-end"
+            onClick={generateImage}
+            disabled={imgBusy || !imgPrompt.trim()}
+            className="rounded-md bg-violet-500 px-4 py-2 text-sm font-medium text-white hover:bg-violet-400 disabled:opacity-50"
           >
-            Send
+            {imgBusy ? "Generating…" : "Generate"}
           </button>
         </div>
-      </footer>
+        {imgBusy && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+              <span>Generating image…</span>
+              <span>{imgElapsed}s</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-gray-800 overflow-hidden">
+              <div
+                className="h-full bg-violet-500 transition-all duration-500"
+                style={{ width: imgProgress + "%" }}
+              />
+            </div>
+          </div>
+        )}
+        {imgErr && <p className="mt-2 text-xs text-red-400">{imgErr}</p>}
+      </div>
     </div>
   );
 }
