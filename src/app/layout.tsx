@@ -29,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="hidden sm:flex items-center gap-1 text-sm text-zinc-400">
               <a href="/" className="rounded-md px-3 py-2 hover:text-white hover:bg-white/5 transition">Pricing</a>
               <a href="/docs" className="rounded-md px-3 py-2 hover:text-white hover:bg-white/5 transition">Docs</a>
+              <a href="/chat" className="rounded-md px-3 py-2 hover:text-white hover:bg-white/5 transition">Chat</a>
               <a href="/dashboard" className="rounded-md px-3 py-2 hover:text-white hover:bg-white/5 transition">Dashboard</a>
             </nav>
             <a href="/login" className="rounded-full bg-white px-5 py-2 text-sm font-medium text-black hover:bg-zinc-200 transition">
