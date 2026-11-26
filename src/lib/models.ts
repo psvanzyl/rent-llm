@@ -19,6 +19,13 @@ export const MODELS: ModelEntry[] = [
     pricePerMTok: { input: 0.1, output: 0.2 },
   },
   {
+    id: 'bonsai',
+    display: 'bonsai (bonsai 2.5)',
+    backendId: 'bonsai-2.5-27b',
+    contextLength: 65536,
+    pricePerMTok: { input: 0.1, output: 0.2 },
+  },
+  {
     id: 'image',
     display: 'image (realvisxl v5)',
     backendId: 'realvisxl-v5',
@@ -37,6 +44,10 @@ const ALIASES: Record<string, string> = {
   'sensei-qwen3.8': 'sensei',
   'qwen3.8': 'sensei',
   'qwen3.8-flash-next': 'sensei',
+  'bonsai': 'bonsai',
+  'bonsai-2.5': 'bonsai',
+  'bonsai-2.5-27b': 'bonsai',
+  'bonsai2.5': 'bonsai',
   'sd-1.5': 'image',
   'sd1.5': 'image',
   'dall-e': 'image',
@@ -47,6 +58,7 @@ const ALIASES: Record<string, string> = {
 export function resolveModelId(model: string): string {
   const m = (model || '').trim().toLowerCase();
   if (ALIASES[m]) return ALIASES[m];
+  if (m === 'bonsai' || m.startsWith('bonsai-2.5') || m === 'bonsai2.5') return 'bonsai';
   if (m.startsWith('bonsai')) return 'sensei'; // retired model: route to the main brain
   if (m.startsWith('image') || m.startsWith('sd') || m.startsWith('dall')) return 'image';
   return 'sensei'; // unknown ids default to the main model

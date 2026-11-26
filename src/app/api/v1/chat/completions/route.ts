@@ -14,7 +14,14 @@ interface BackendConfig {
   key: string;
 }
 
-function backendForModel(_model: string): BackendConfig {
+function backendForModel(model: string): BackendConfig {
+  const resolved = resolveModelId(model);
+  if (resolved === "bonsai") {
+    return {
+      url: process.env.LLM_BACKEND3_URL || "http://192.168.178.10:8080/v1",
+      key: process.env.LLM_BACKEND3_KEY || "local-no-auth",
+    };
+  }
   return {
     url: process.env.LLM_BACKEND_URL || "http://192.168.178.16:8086/v1",
     key: process.env.LLM_BACKEND_KEY || "local-no-auth",
